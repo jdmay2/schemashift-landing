@@ -5,7 +5,7 @@ TypeScript schema migration CLI. Convert between Zod, Yup, Joi, io-ts, and Valib
 ## Install
 
 ```bash
-npm install -g schemashift
+npm install -g schemashift-cli
 ```
 
 ## Usage

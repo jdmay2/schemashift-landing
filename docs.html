@@ -293,7 +293,7 @@
 
         <h3 id="installation">Installation</h3>
         <p>Install SchemaShift globally via npm:</p>
-        <pre><code><span class="cmd">npm install -g schemashift</span></code></pre>
+        <pre><code><span class="cmd">npm install -g schemashift-cli</span></code></pre>
         <p>Or use npx to run without installing:</p>
         <pre><code><span class="cmd">npx schemashift</span> <span class="flag">--help</span></code></pre>
 
@@ -1053,7 +1053,7 @@ jobs:
         with:
           node-version: 22
 
-      - run: npm install -g schemashift
+      - run: npm install -g schemashift-cli
 
       - name: Check for Yup schemas
         run: schemashift analyze ./src --json
@@ -1067,7 +1067,7 @@ jobs:
         <pre><code>schema-check:
   image: node:22
   script:
-    - npm install -g schemashift
+    - npm install -g schemashift-cli
     - schemashift migrate ./src --from yup --to zod --dry-run --ci
   variables:
     SCHEMASHIFT_LICENSE_KEY: $SCHEMASHIFT_LICENSE_KEY</code></pre>
