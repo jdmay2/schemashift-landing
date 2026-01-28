@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SchemaShift - TypeScript Schema Migration CLI</title>
+    <meta
+      name="description"
+      content="Convert schemas between Zod, Yup, Joi, io-ts, and Valibot with AST-based transformations."
+    />
+    <style>
+      :root {
+        --bg: #0a0a0b;
+        --surface: #141416;
+        --border: #27272a;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --accent: #3b82f6;
+        --green: #22c55e;
+        --purple: #a855f7;
+        --orange: #f97316;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      header {
+        text-align: center;
+        padding: 4rem 0 3rem;
+      }
+      .logo {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+      }
+      .logo span {
+        color: var(--accent);
+      }
+      .tagline {
+        font-size: 1.25rem;
+        color: var(--muted);
+        max-width: 600px;
+        margin: 0 auto 2rem;
+      }
+      .install-cmd {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.5rem;
+        font-family: "SF Mono", Monaco, monospace;
+        font-size: 0.95rem;
+        display: inline-block;
+        color: var(--green);
+      }
+      .install-cmd::before {
+        content: "$ ";
+        color: var(--muted);
+      }
+
+      .pricing-section {
+        padding: 3rem 0;
+      }
+      .pricing-section h2 {
+        text-align: center;
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      .pricing-subtitle {
+        text-align: center;
+        color: var(--muted);
+        margin-bottom: 3rem;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+      }
+      @media (max-width: 900px) {
+        .pricing-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+      }
+      .card.featured {
+        border-color: var(--accent);
+        box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+      }
+      .card-badge {
+        background: var(--accent);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        width: fit-content;
+        margin-bottom: 1rem;
+      }
+      .card h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+      }
+      .price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+      }
+      .price-note {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-bottom: 1.5rem;
+      }
+      .features {
+        list-style: none;
+        flex-grow: 1;
+        margin-bottom: 1.5rem;
+      }
+      .features li {
+        padding: 0.5rem 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      .features li::before {
+        content: "✓";
+        color: var(--green);
+        font-weight: bold;
+      }
+      .features li.disabled::before {
+        content: "—";
+        color: var(--border);
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 0.875rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .btn-secondary:hover {
+        border-color: var(--muted);
+      }
+
+      .migrations-section {
+        padding: 3rem 0;
+        border-top: 1px solid var(--border);
+      }
+      .migrations-section h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .migrations-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      .migrations-table th,
+      .migrations-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      .migrations-table th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .migrations-table th:not(:first-child),
+      .migrations-table td:not(:first-child) {
+        text-align: center;
+      }
+      .check {
+        color: var(--green);
+      }
+      .cross {
+        color: var(--border);
+      }
+
+      footer {
+        text-align: center;
+        padding: 3rem 0;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+      footer a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="logo">Schema<span>Shift</span></div>
+        <p class="tagline">
+          TypeScript schema migration CLI. Convert between Zod, Yup, Joi, io-ts,
+          and Valibot with AST-based transformations.
+        </p>
+        <code class="install-cmd">npm install -g schemashift</code>
+      </header>
+
+      <section class="pricing-section">
+        <h2>Simple Pricing</h2>
+        <p class="pricing-subtitle">Start free. Upgrade when you need more.</p>
+
+        <div class="pricing-grid">
+          <!-- Free -->
+          <div class="card">
+            <h3>Free</h3>
+            <div class="price">$0</div>
+            <div class="price-note">Forever</div>
+            <ul class="features">
+              <li>5 files per migration</li>
+              <li>Yup to Zod only</li>
+              <li>1 device</li>
+              <li>JSON reports</li>
+              <li class="disabled">CI/CD support</li>
+              <li class="disabled">Watch mode</li>
+            </ul>
+            <a
+              href="https://www.npmjs.com/package/schemashift"
+              class="btn btn-secondary"
+              target="_blank"
+              >Get Started</a
+            >
+          </div>
+
+          <!-- Individual -->
+          <div class="card">
+            <h3>Individual</h3>
+            <div class="price">$49</div>
+            <div class="price-note">One-time payment</div>
+            <ul class="features">
+              <li>Unlimited files</li>
+              <li>Yup, Joi, Zod v3-v4</li>
+              <li>1 device</li>
+              <li>HTML reports</li>
+              <li class="disabled">CI/CD support</li>
+              <li class="disabled">Watch mode</li>
+            </ul>
+            <a
+              href="https://buy.polar.sh/polar_cl_1Wgutqm927aHklDmVkuRy9R397qGNuKnxzCcB4P4r7q"
+              data-polar-checkout
+              data-polar-checkout-theme="dark"
+              class="btn btn-primary"
+              >Buy Individual</a
+            >
+          </div>
+
+          <!-- Pro -->
+          <div class="card featured" style="position: relative">
+            <div class="card-badge" style="position: absolute; right: 1.5rem">
+              Most Popular
+            </div>
+            <h3>Pro</h3>
+            <div class="price">$149</div>
+            <div class="price-note">One-time payment</div>
+            <ul class="features">
+              <li>Unlimited files</li>
+              <li>All migrations</li>
+              <li>4 devices</li>
+              <li>HTML reports</li>
+              <li>CI/CD support</li>
+              <li>Watch mode</li>
+            </ul>
+            <a
+              href="https://buy.polar.sh/polar_cl_lXgqwCT59i2Bi4IPyHWvAr0NmxnUSzWPQgIG140tULV"
+              data-polar-checkout
+              data-polar-checkout-theme="dark"
+              class="btn btn-primary"
+              >Buy Pro</a
+            >
+          </div>
+
+          <!-- Team -->
+          <div class="card">
+            <h3>Team</h3>
+            <div style="display: flex; align-items: baseline">
+              <div class="price">$29</div>
+              <div
+                style="
+                  color: var(--muted);
+                  font-size: 1.25rem;
+                  padding-left: 0.25rem;
+                "
+              >
+                /month
+              </div>
+            </div>
+            <div class="price-note">Recurring payment</div>
+            <ul class="features">
+              <li>Unlimited files</li>
+              <li>All migrations</li>
+              <li>Unlimited devices</li>
+              <li>HTML reports</li>
+              <li>CI/CD support</li>
+              <li>Watch mode</li>
+            </ul>
+            <a
+              href="https://buy.polar.sh/polar_cl_vFMywDBsSyYygwrlthhL6uZeeKptrsKf2L5wi108Qxs"
+              data-polar-checkout
+              data-polar-checkout-theme="dark"
+              class="btn btn-primary"
+              >Buy Team</a
+            >
+          </div>
+        </div>
+      </section>
+
+      <section class="migrations-section">
+        <h2>Supported Migrations</h2>
+        <table class="migrations-table">
+          <thead>
+            <tr>
+              <th>Migration Path</th>
+              <th>Free</th>
+              <th>Individual</th>
+              <th>Pro</th>
+              <th>Team</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Yup → Zod</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Joi → Zod</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Zod v3 → v4</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>io-ts → Zod</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Valibot conversions</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="https://github.com/qwady/schemashift">GitHub</a> ·
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> ·
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+
+    <!-- Polar Embedded Checkout -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@polar-sh/checkout@0.1/dist/embed.global.js"
+      defer
+      data-auto-init
+    ></script>
+  </body>
+</html>

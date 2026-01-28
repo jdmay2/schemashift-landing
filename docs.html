@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Documentation - SchemaShift</title>
+    <meta
+      name="description"
+      content="SchemaShift documentation - CLI commands, migration examples, configuration, and license activation."
+    />
+    <style>
+      :root {
+        --bg: #0a0a0b;
+        --surface: #141416;
+        --surface-2: #1c1c1f;
+        --border: #27272a;
+        --text: #fafafa;
+        --muted: #a1a1aa;
+        --accent: #3b82f6;
+        --green: #22c55e;
+        --yellow: #eab308;
+        --red: #ef4444;
+        --purple: #a855f7;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+        min-height: 100vh;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* Layout */
+      .layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        min-height: 100vh;
+      }
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        .sidebar {
+          display: none;
+        }
+      }
+
+      /* Sidebar */
+      .sidebar {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 2rem 1.5rem;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+      }
+      .sidebar-logo {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+      }
+      .sidebar-logo span {
+        color: var(--accent);
+      }
+      .sidebar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .sidebar a {
+        color: var(--muted);
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.9rem;
+      }
+      .sidebar a:hover {
+        color: var(--text);
+        background: var(--surface-2);
+        text-decoration: none;
+      }
+      .sidebar-section {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 1.5rem 0 0.5rem 0.75rem;
+      }
+
+      /* Content */
+      .content {
+        padding: 3rem 4rem;
+        max-width: 900px;
+      }
+      @media (max-width: 900px) {
+        .content {
+          padding: 2rem;
+        }
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1rem;
+      }
+      h2 {
+        font-size: 1.5rem;
+        margin: 3rem 0 1rem;
+        padding-top: 1rem;
+      }
+      h3 {
+        font-size: 1.15rem;
+        margin: 2rem 0 0.75rem;
+        color: var(--muted);
+      }
+      p {
+        margin-bottom: 1rem;
+      }
+
+      /* Code */
+      code {
+        font-family: "SF Mono", Monaco, "Courier New", monospace;
+        font-size: 0.875em;
+        background: var(--surface);
+        padding: 0.2em 0.4em;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.25rem;
+        overflow-x: auto;
+        margin: 1rem 0 1.5rem;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        font-size: 0.875rem;
+        line-height: 1.6;
+      }
+      .cmd {
+        color: var(--green);
+      }
+      .flag {
+        color: var(--yellow);
+      }
+      .comment {
+        color: var(--muted);
+      }
+      .string {
+        color: var(--accent);
+      }
+
+      /* Tables */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0 1.5rem;
+        font-size: 0.9rem;
+      }
+      th,
+      td {
+        padding: 0.75rem 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        background: var(--surface);
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      /* Callouts */
+      .callout {
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1.5rem 0;
+        border-left: 4px solid;
+      }
+      .callout-info {
+        background: rgba(59, 130, 246, 0.1);
+        border-color: var(--accent);
+      }
+      .callout-warning {
+        background: rgba(234, 179, 8, 0.1);
+        border-color: var(--yellow);
+      }
+      .callout-success {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: var(--green);
+      }
+      .callout-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .callout p {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      /* Lists */
+      ul,
+      ol {
+        margin: 0.5rem 0 1.5rem 1.5rem;
+      }
+      li {
+        margin: 0.5rem 0;
+      }
+
+      /* Back link mobile */
+      .mobile-nav {
+        display: none;
+        padding: 1rem 2rem;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+      @media (max-width: 900px) {
+        .mobile-nav {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-logo">Schema<span>Shift</span></div>
+        <nav>
+          <a href="#getting-started">Getting Started</a>
+          <a href="#installation">Installation</a>
+          <a href="#quick-start">Quick Start</a>
+
+          <div class="sidebar-section">Commands</div>
+          <a href="#analyze">analyze</a>
+          <a href="#migrate">migrate</a>
+          <a href="#watch">watch</a>
+          <a href="#rollback">rollback</a>
+          <a href="#license">license</a>
+          <a href="#init">init</a>
+
+          <div class="sidebar-section">Migrations</div>
+          <a href="#yup-to-zod">Yup → Zod</a>
+          <a href="#joi-to-zod">Joi → Zod</a>
+          <a href="#zod-v3-to-v4">Zod v3 → v4</a>
+          <a href="#io-ts-to-zod">io-ts → Zod</a>
+
+          <div class="sidebar-section">Configuration</div>
+          <a href="#config-file">Config File</a>
+          <a href="#custom-rules">Custom Rules</a>
+
+          <div class="sidebar-section">Licensing</div>
+          <a href="#tiers">Tiers & Features</a>
+          <a href="#activation">Activation</a>
+          <a href="#ci-cd">CI/CD Setup</a>
+
+          <div class="sidebar-section">Reference</div>
+          <a href="#troubleshooting">Troubleshooting</a>
+          <a href="#support">Support</a>
+        </nav>
+      </aside>
+
+      <div class="mobile-nav">
+        <a href="/">← Back to Home</a>
+      </div>
+
+      <main class="content">
+        <h1>Documentation</h1>
+        <p>
+          SchemaShift is a TypeScript CLI tool that migrates schemas between
+          validation libraries using AST-based transformations. It preserves
+          code structure, formatting, and comments while converting your
+          schemas.
+        </p>
+
+        <!-- GETTING STARTED -->
+        <h2 id="getting-started">Getting Started</h2>
+
+        <h3 id="installation">Installation</h3>
+        <p>Install SchemaShift globally via npm:</p>
+        <pre><code><span class="cmd">npm install -g schemashift</span></code></pre>
+        <p>Or use npx to run without installing:</p>
+        <pre><code><span class="cmd">npx schemashift</span> <span class="flag">--help</span></code></pre>
+
+        <h3 id="quick-start">Quick Start</h3>
+        <p>Analyze your project to see what schemas you have:</p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src</code></pre>
+
+        <p>Preview migration changes with dry-run:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--dry-run</span></code></pre>
+
+        <p>Run the migration:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            Always run with <code>--dry-run</code> first to preview changes
+            before modifying files.
+          </p>
+        </div>
+
+        <!-- COMMANDS -->
+        <h2 id="analyze">analyze</h2>
+        <p>
+          Scan your project and detect schema definitions across all supported
+          libraries.
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> &lt;path&gt; [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output results as JSON</td>
+            </tr>
+            <tr>
+              <td><code>-v, --verbose</code></td>
+              <td>Show detailed schema information</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Example output:</p>
+        <pre><code>Schema Analysis
+
+Total files: 47
+Files with schemas: 12
+Total schemas: 34
+
+Schemas by library:
+
+  yup: 28
+  zod: 6</code></pre>
+
+        <h2 id="migrate">migrate</h2>
+        <p>Transform schemas from one library to another.</p>
+        <pre><code><span class="cmd">schemashift migrate</span> &lt;path&gt; <span class="flag">--from</span> &lt;library&gt; <span class="flag">--to</span> &lt;library&gt; [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-f, --from</code></td>
+              <td>Source library (yup, joi, io-ts, zod-v3)</td>
+            </tr>
+            <tr>
+              <td><code>-t, --to</code></td>
+              <td>Target library (zod, v4, valibot)</td>
+            </tr>
+            <tr>
+              <td><code>-d, --dry-run</code></td>
+              <td>Preview changes without writing files</td>
+            </tr>
+            <tr>
+              <td><code>-v, --verbose</code></td>
+              <td>Show detailed transformation info</td>
+            </tr>
+            <tr>
+              <td><code>-c, --config</code></td>
+              <td>Path to config file</td>
+            </tr>
+            <tr>
+              <td><code>--report &lt;format&gt;</code></td>
+              <td>Generate report (json, html)</td>
+            </tr>
+            <tr>
+              <td><code>--report-output</code></td>
+              <td>Report output path</td>
+            </tr>
+            <tr>
+              <td><code>--git-branch</code></td>
+              <td>Create git branch for changes</td>
+            </tr>
+            <tr>
+              <td><code>--git-commit</code></td>
+              <td>Auto-commit changes</td>
+            </tr>
+            <tr>
+              <td><code>--no-backup</code></td>
+              <td>Skip backup creation</td>
+            </tr>
+            <tr>
+              <td><code>--ci</code></td>
+              <td>CI mode (exit code 1 on failure)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># Basic migration</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod
+
+<span class="comment"># With HTML report</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> joi <span class="flag">--to</span> zod <span class="flag">--report</span> html
+
+<span class="comment"># Create branch and auto-commit</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--git-branch</span> <span class="flag">--git-commit</span>
+
+<span class="comment"># CI mode with JSON report</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--ci</span> <span class="flag">--report</span> json</code></pre>
+
+        <h2 id="watch">watch</h2>
+        <p>
+          Watch files and automatically migrate on save.
+          <strong>Requires Pro or Team license.</strong>
+        </p>
+        <pre><code><span class="cmd">schemashift watch</span> &lt;path&gt; <span class="flag">--from</span> &lt;library&gt; <span class="flag">--to</span> &lt;library&gt;</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-f, --from</code></td>
+              <td>Source library</td>
+            </tr>
+            <tr>
+              <td><code>-t, --to</code></td>
+              <td>Target library</td>
+            </tr>
+            <tr>
+              <td><code>-c, --config</code></td>
+              <td>Path to config file</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Press <code>Ctrl+C</code> to stop watching.</p>
+
+        <h2 id="rollback">rollback</h2>
+        <p>Restore files from a backup created during migration.</p>
+        <pre><code><span class="cmd">schemashift rollback</span> [backupId] [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-l, --list</code></td>
+              <td>List available backups</td>
+            </tr>
+            <tr>
+              <td><code>--clean</code></td>
+              <td>Remove old backups (keeps last 5)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># List all backups</span>
+<span class="cmd">schemashift rollback</span> <span class="flag">--list</span>
+
+<span class="comment"># Restore most recent backup</span>
+<span class="cmd">schemashift rollback</span>
+
+<span class="comment"># Restore specific backup</span>
+<span class="cmd">schemashift rollback</span> backup-1706123456789
+
+<span class="comment"># Clean old backups</span>
+<span class="cmd">schemashift rollback</span> <span class="flag">--clean</span></code></pre>
+
+        <h2 id="license">license</h2>
+        <p>Manage your license activation.</p>
+        <pre><code><span class="cmd">schemashift license</span> [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-a, --activate &lt;key&gt;</code></td>
+              <td>Activate a license key</td>
+            </tr>
+            <tr>
+              <td><code>-d, --deactivate</code></td>
+              <td>Deactivate current license</td>
+            </tr>
+            <tr>
+              <td><code>-s, --status</code></td>
+              <td>Show license status</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># Check current license status</span>
+<span class="cmd">schemashift license</span>
+
+<span class="comment"># Activate a license</span>
+<span class="cmd">schemashift license</span> <span class="flag">--activate</span> SCHEMASHIFT_PRO_xxxx-xxxx-xxxx
+
+<span class="comment"># Deactivate to move to another device</span>
+<span class="cmd">schemashift license</span> <span class="flag">--deactivate</span></code></pre>
+
+        <h2 id="init">init</h2>
+        <p>Create a <code>.schemashiftrc.json</code> configuration file.</p>
+        <pre><code><span class="cmd">schemashift init</span> [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-f, --force</code></td>
+              <td>Overwrite existing config</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- MIGRATIONS -->
+        <h2 id="yup-to-zod">Yup → Zod</h2>
+        <p><strong>Available in: Free, Individual, Pro, Team</strong></p>
+
+        <p>Transforms Yup schemas to Zod equivalents:</p>
+        <pre><code><span class="comment">// Before (Yup)</span>
+import * as yup from <span class="string">'yup'</span>;
+
+const userSchema = yup.object({
+  name: yup.string().required(),
+  email: yup.string().email().required(),
+  age: yup.number().positive().optional(),
+});
+
+<span class="comment">// After (Zod)</span>
+import { z } from <span class="string">'zod'</span>;
+
+const userSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().positive().optional(),
+});</code></pre>
+
+        <h3>Mapping Reference</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Yup</th>
+              <th>Zod</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>yup.string()</code></td>
+              <td><code>z.string()</code></td>
+            </tr>
+            <tr>
+              <td><code>yup.number()</code></td>
+              <td><code>z.number()</code></td>
+            </tr>
+            <tr>
+              <td><code>yup.boolean()</code></td>
+              <td><code>z.boolean()</code></td>
+            </tr>
+            <tr>
+              <td><code>yup.date()</code></td>
+              <td><code>z.date()</code></td>
+            </tr>
+            <tr>
+              <td><code>yup.array()</code></td>
+              <td><code>z.array()</code></td>
+            </tr>
+            <tr>
+              <td><code>yup.object()</code></td>
+              <td><code>z.object()</code></td>
+            </tr>
+            <tr>
+              <td><code>.required()</code></td>
+              <td>(default in Zod)</td>
+            </tr>
+            <tr>
+              <td><code>.optional()</code></td>
+              <td><code>.optional()</code></td>
+            </tr>
+            <tr>
+              <td><code>.nullable()</code></td>
+              <td><code>.nullable()</code></td>
+            </tr>
+            <tr>
+              <td><code>.min(n)</code></td>
+              <td><code>.min(n)</code></td>
+            </tr>
+            <tr>
+              <td><code>.max(n)</code></td>
+              <td><code>.max(n)</code></td>
+            </tr>
+            <tr>
+              <td><code>.email()</code></td>
+              <td><code>.email()</code></td>
+            </tr>
+            <tr>
+              <td><code>.url()</code></td>
+              <td><code>.url()</code></td>
+            </tr>
+            <tr>
+              <td><code>.oneOf([...])</code></td>
+              <td><code>z.enum([...])</code></td>
+            </tr>
+            <tr>
+              <td><code>.mixed()</code></td>
+              <td><code>z.unknown()</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Note</div>
+          <p>
+            Yup's <code>.test()</code> custom validators become Zod's
+            <code>.refine()</code>. Review these manually for correctness.
+          </p>
+        </div>
+
+        <h2 id="joi-to-zod">Joi → Zod</h2>
+        <p><strong>Available in: Individual, Pro, Team</strong></p>
+
+        <pre><code><span class="comment">// Before (Joi)</span>
+import Joi from <span class="string">'joi'</span>;
+
+const schema = Joi.object({
+  username: Joi.string().alphanum().min(3).max(30).required(),
+  email: Joi.string().email(),
+  website: Joi.string().uri(),
+});
+
+<span class="comment">// After (Zod)</span>
+import { z } from <span class="string">'zod'</span>;
+
+const schema = z.object({
+  username: z.string().regex(/^[a-zA-Z0-9]+$/).min(3).max(30),
+  email: z.string().email().optional(),
+  website: z.string().url().optional(),
+});</code></pre>
+
+        <h3>Mapping Reference</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Joi</th>
+              <th>Zod</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Joi.string()</code></td>
+              <td><code>z.string()</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.number()</code></td>
+              <td><code>z.number()</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.boolean()</code></td>
+              <td><code>z.boolean()</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.date()</code></td>
+              <td><code>z.date()</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.array()</code></td>
+              <td><code>z.array()</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.object()</code></td>
+              <td><code>z.object()</code></td>
+            </tr>
+            <tr>
+              <td><code>.required()</code></td>
+              <td>(default in Zod)</td>
+            </tr>
+            <tr>
+              <td><code>.optional()</code></td>
+              <td><code>.optional()</code></td>
+            </tr>
+            <tr>
+              <td><code>.allow(null)</code></td>
+              <td><code>.nullable()</code></td>
+            </tr>
+            <tr>
+              <td><code>.alphanum()</code></td>
+              <td><code>.regex(/^[a-zA-Z0-9]+$/)</code></td>
+            </tr>
+            <tr>
+              <td><code>.email()</code></td>
+              <td><code>.email()</code></td>
+            </tr>
+            <tr>
+              <td><code>.uri()</code></td>
+              <td><code>.url()</code></td>
+            </tr>
+            <tr>
+              <td><code>.valid(...)</code></td>
+              <td><code>z.enum([...])</code></td>
+            </tr>
+            <tr>
+              <td><code>.any()</code></td>
+              <td><code>z.unknown()</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Note</div>
+          <p>
+            Joi's <code>.when()</code> conditional validation requires manual
+            conversion using <code>.refine()</code> or discriminated unions.
+          </p>
+        </div>
+
+        <h2 id="zod-v3-to-v4">Zod v3 → v4</h2>
+        <p><strong>Available in: Individual, Pro, Team</strong></p>
+
+        <p>Handles breaking changes between Zod v3 and v4:</p>
+        <pre><code><span class="comment">// Before (Zod v3)</span>
+const schema = z.record(z.number());
+const result = schema.safeParse(data);
+if (!result.success) {
+  console.log(result.error.errors);
+}
+
+<span class="comment">// After (Zod v4)</span>
+const schema = z.record(z.string(), z.number());
+const result = schema.safeParse(data);
+if (!result.success) {
+  console.log(result.error.issues);
+}</code></pre>
+
+        <h3>Breaking Changes Handled</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>v3</th>
+              <th>v4</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>z.record(valueSchema)</code></td>
+              <td><code>z.record(z.string(), valueSchema)</code></td>
+            </tr>
+            <tr>
+              <td><code>error.errors</code></td>
+              <td><code>error.issues</code></td>
+            </tr>
+            <tr>
+              <td><code>error.flatten()</code></td>
+              <td><code>z.prettifyError(error)</code></td>
+            </tr>
+            <tr>
+              <td><code>z.strictObject()</code></td>
+              <td><code>z.object().strict()</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="io-ts-to-zod">io-ts → Zod</h2>
+        <p><strong>Available in: Pro, Team</strong></p>
+
+        <pre><code><span class="comment">// Before (io-ts)</span>
+import * as t from <span class="string">'io-ts'</span>;
+
+const User = t.type({
+  name: t.string,
+  age: t.number,
+  email: t.union([t.string, t.undefined]),
+});
+
+<span class="comment">// After (Zod)</span>
+import { z } from <span class="string">'zod'</span>;
+
+const User = z.object({
+  name: z.string(),
+  age: z.number(),
+  email: z.string().optional(),
+});</code></pre>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Manual Review Required</div>
+          <p>
+            io-ts uses fp-ts patterns (Either, pipe) that don't translate
+            directly. Review <code>decode()</code> calls and error handling
+            after migration.
+          </p>
+        </div>
+
+        <!-- CONFIGURATION -->
+        <h2 id="config-file">Config File</h2>
+        <p>Create <code>.schemashiftrc.json</code> in your project root:</p>
+        <pre><code>{
+  <span class="string">"include"</span>: [<span class="string">"src/**/*.ts"</span>, <span class="string">"src/**/*.tsx"</span>],
+  <span class="string">"exclude"</span>: [
+    <span class="string">"**/node_modules/**"</span>,
+    <span class="string">"**/dist/**"</span>,
+    <span class="string">"**/*.d.ts"</span>,
+    <span class="string">"**/*.test.ts"</span>
+  ],
+  <span class="string">"backup"</span>: {
+    <span class="string">"enabled"</span>: true,
+    <span class="string">"dir"</span>: <span class="string">".schemashift-backup"</span>
+  },
+  <span class="string">"git"</span>: {
+    <span class="string">"enabled"</span>: false,
+    <span class="string">"createBranch"</span>: true,
+    <span class="string">"branchPrefix"</span>: <span class="string">"schemashift/"</span>,
+    <span class="string">"autoCommit"</span>: false,
+    <span class="string">"commitMessage"</span>: <span class="string">"chore: migrate schemas with SchemaShift"</span>
+  },
+  <span class="string">"customRules"</span>: []
+}</code></pre>
+
+        <h3>Options</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Type</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>include</code></td>
+              <td>string[]</td>
+              <td>Glob patterns for files to include</td>
+            </tr>
+            <tr>
+              <td><code>exclude</code></td>
+              <td>string[]</td>
+              <td>Glob patterns for files to exclude</td>
+            </tr>
+            <tr>
+              <td><code>backup.enabled</code></td>
+              <td>boolean</td>
+              <td>Create backups before migration</td>
+            </tr>
+            <tr>
+              <td><code>backup.dir</code></td>
+              <td>string</td>
+              <td>Backup directory path</td>
+            </tr>
+            <tr>
+              <td><code>git.enabled</code></td>
+              <td>boolean</td>
+              <td>Enable git integration</td>
+            </tr>
+            <tr>
+              <td><code>git.createBranch</code></td>
+              <td>boolean</td>
+              <td>Create branch for changes</td>
+            </tr>
+            <tr>
+              <td><code>git.branchPrefix</code></td>
+              <td>string</td>
+              <td>Branch name prefix</td>
+            </tr>
+            <tr>
+              <td><code>git.autoCommit</code></td>
+              <td>boolean</td>
+              <td>Auto-commit after migration</td>
+            </tr>
+            <tr>
+              <td><code>git.commitMessage</code></td>
+              <td>string</td>
+              <td>Commit message template</td>
+            </tr>
+            <tr>
+              <td><code>customRules</code></td>
+              <td>array</td>
+              <td>Custom transformation rules</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="custom-rules">Custom Rules</h2>
+        <p>Define custom transformation rules in your config:</p>
+        <pre><code>{
+  <span class="string">"customRules"</span>: [
+    {
+      <span class="string">"name"</span>: <span class="string">"company-validator"</span>,
+      <span class="string">"match"</span>: <span class="string">"yup.string().companyId()"</span>,
+      <span class="string">"replace"</span>: <span class="string">"z.string().regex(/^CMP-[0-9]+$/)"</span>
+    }
+  ]
+}</code></pre>
+
+        <!-- LICENSING -->
+        <h2 id="tiers">Tiers & Features</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Free</th>
+              <th>Individual ($49)</th>
+              <th>Pro ($149)</th>
+              <th>Team ($29/mo)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Files per migration</td>
+              <td>5</td>
+              <td>Unlimited</td>
+              <td>Unlimited</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <td>Yup → Zod</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Joi → Zod</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Zod v3 → v4</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>io-ts → Zod</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Valibot conversions</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Devices</td>
+              <td>1</td>
+              <td>1</td>
+              <td>4</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <td>HTML reports</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>CI/CD support</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Watch mode</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><a href="/">View pricing and purchase →</a></p>
+
+        <h2 id="activation">Activation</h2>
+        <p>
+          After purchasing, you'll receive a license key via email. Activate it:
+        </p>
+        <pre><code><span class="cmd">schemashift license</span> <span class="flag">--activate</span> SCHEMASHIFT_PRO_xxxx-xxxx-xxxx</code></pre>
+
+        <p>
+          Your license is stored locally at
+          <code>~/.config/schemashift/license.json</code>.
+        </p>
+
+        <h3>Moving to Another Device</h3>
+        <p>Deactivate on your current device first:</p>
+        <pre><code><span class="cmd">schemashift license</span> <span class="flag">--deactivate</span></code></pre>
+        <p>Then activate on the new device with the same key.</p>
+
+        <h2 id="ci-cd">CI/CD Setup</h2>
+        <p><strong>Requires Pro or Team license.</strong></p>
+
+        <p>
+          Set the <code>SCHEMASHIFT_LICENSE_KEY</code> environment variable in
+          your CI platform:
+        </p>
+
+        <h3>GitHub Actions</h3>
+        <pre><code>name: Schema Migration Check
+
+on: [push]
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install -g schemashift
+
+      - name: Check for Yup schemas
+        run: schemashift analyze ./src --json
+
+      - name: Dry run migration
+        env:
+          SCHEMASHIFT_LICENSE_KEY: ${{ secrets.SCHEMASHIFT_LICENSE_KEY }}
+        run: schemashift migrate ./src --from yup --to zod --dry-run --ci</code></pre>
+
+        <h3>GitLab CI</h3>
+        <pre><code>schema-check:
+  image: node:22
+  script:
+    - npm install -g schemashift
+    - schemashift migrate ./src --from yup --to zod --dry-run --ci
+  variables:
+    SCHEMASHIFT_LICENSE_KEY: $SCHEMASHIFT_LICENSE_KEY</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            The <code>--ci</code> flag exits with code 1 if any migration fails,
+            making it suitable for CI pipelines.
+          </p>
+        </div>
+
+        <!-- REFERENCE -->
+        <h2 id="troubleshooting">Troubleshooting</h2>
+
+        <h3>License activation fails</h3>
+        <ul>
+          <li>Check your internet connection</li>
+          <li>Verify the key is correct (no extra spaces)</li>
+          <li>
+            If you've hit the device limit, deactivate another device first
+          </li>
+        </ul>
+
+        <h3>"Migration requires higher tier"</h3>
+        <p>
+          Some migration paths (Joi, io-ts) require paid tiers. Run
+          <code>schemashift pricing</code> to see what's included in each tier.
+        </p>
+
+        <h3>"No handler for migration"</h3>
+        <p>The requested migration path isn't supported. Supported paths:</p>
+        <ul>
+          <li><code>yup</code> → <code>zod</code></li>
+          <li><code>joi</code> → <code>zod</code></li>
+          <li><code>zod-v3</code> → <code>v4</code></li>
+          <li><code>io-ts</code> → <code>zod</code></li>
+        </ul>
+
+        <h3>Transformation produces incorrect code</h3>
+        <ol>
+          <li>Run with <code>--dry-run</code> first</li>
+          <li>Use <code>schemashift rollback</code> to restore from backup</li>
+          <li>Report the issue with the original code snippet</li>
+        </ol>
+
+        <h3>Offline usage</h3>
+        <p>
+          SchemaShift validates your license weekly. You can work offline for up
+          to 7 days after the last successful validation.
+        </p>
+
+        <h2 id="support">Support</h2>
+
+        <ul>
+          <li>
+            <strong>Email:</strong>
+            <a href="mailto:support@qwady.com">support@qwady.com</a>
+          </li>
+          <li>
+            <strong>Issues:</strong> Email with code samples for transformation
+            bugs
+          </li>
+        </ul>
+
+        <div class="callout callout-success">
+          <div class="callout-title">Pro & Team</div>
+          <p>
+            Priority support with faster response times for paid license
+            holders.
+          </p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
