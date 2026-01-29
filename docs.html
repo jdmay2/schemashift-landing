@@ -278,6 +278,10 @@
           <a href="#chain-migrations">Chain Migrations</a>
           <a href="#ecosystem-detection">Ecosystem Detection</a>
           <a href="#standard-schema">Standard Schema</a>
+          <a href="#form-resolver-migration">Form Resolver Migration</a>
+          <a href="#complexity-estimation">Complexity Estimation</a>
+          <a href="#todo-summary">TODO Summary</a>
+          <a href="#monorepo-migration">Monorepo Migration</a>
           <a href="#incremental-migration">Incremental Migration</a>
           <a href="#package-updates">Package Updates</a>
 
@@ -951,13 +955,33 @@ if (!result.success) {
             </tr>
             <tr>
               <td><code>error.flatten()</code></td>
-              <td><code>z.treeifyError()</code></td>
-              <td>Removal warning</td>
+              <td><code>z.flattenError(error)</code></td>
+              <td>Auto-transformed</td>
             </tr>
             <tr>
               <td><code>error.format()</code></td>
-              <td><code>z.treeifyError()</code></td>
-              <td>Removal warning</td>
+              <td><code>z.treeifyError(error)</code></td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>schema._def.typeName</code></td>
+              <td><code>schema._zod.def.typeName</code></td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>ctx.addIssue()</code> in <code>.superRefine()</code></td>
+              <td><code>ctx.issues.push()</code> in <code>.check()</code></td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>.catch() + .optional()</code></td>
+              <td><code>.catch()</code> catches all issues, <code>.optional()</code> is no-op</td>
+              <td>Runtime warning</td>
+            </tr>
+            <tr>
+              <td><code>ZodType</code>, <code>ZodSchema</code> imports</td>
+              <td>Moved to <code>zod/v4/core</code></td>
+              <td>Import warning</td>
             </tr>
           </tbody>
         </table>
@@ -1117,6 +1141,17 @@ const User = z.object({
             </tr>
           </tbody>
         </table>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Automatic Resolver Migration</div>
+          <p>
+            <strong>Individual+ tiers</strong> include automatic form resolver migration:
+            <code>yupResolver</code> &rarr; <code>zodResolver</code>,
+            <code>joiResolver</code> &rarr; <code>zodResolver</code>,
+            <code>zodResolver</code> &rarr; <code>valibotResolver</code>
+            imports are rewritten automatically during migration. No manual import changes needed.
+          </p>
+        </div>
 
         <!-- CONFIGURATION -->
         <h2 id="config-file">Config File</h2>
@@ -1394,6 +1429,16 @@ const User = z.object({
               <td>yup → zod</td>
               <td>Must switch schema adapter</td>
             </tr>
+            <tr>
+              <td><code>@asteasolutions/zod-to-openapi</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Needs v4-compatible version</td>
+            </tr>
+            <tr>
+              <td><code>trpc-ui</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Breaks with v4 schemas</td>
+            </tr>
           </tbody>
         </table>
 
@@ -1415,6 +1460,97 @@ const User = z.object({
           @effect/schema, and TypeBox v0.34+. Detection is included in the
           <code>analyze</code> command output (FREE tier).
         </p>
+
+        <h2 id="form-resolver-migration">Form Resolver Migration</h2>
+        <p>
+          SchemaShift automatically rewrites form resolver imports during migration
+          (<span class="badge">Individual+</span>):
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Migration</th>
+              <th>Before</th>
+              <th>After</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>yup → zod</td>
+              <td><code>import { yupResolver } from '@hookform/resolvers/yup'</code></td>
+              <td><code>import { zodResolver } from '@hookform/resolvers/zod'</code></td>
+            </tr>
+            <tr>
+              <td>joi → zod</td>
+              <td><code>import { joiResolver } from '@hookform/resolvers/joi'</code></td>
+              <td><code>import { zodResolver } from '@hookform/resolvers/zod'</code></td>
+            </tr>
+            <tr>
+              <td>zod → valibot</td>
+              <td><code>import { zodResolver } from '@hookform/resolvers/zod'</code></td>
+              <td><code>import { valibotResolver } from '@hookform/resolvers/valibot'</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="margin-top: 1rem; color: var(--muted);">
+          For Formik and @mantine/form, TODO comments are added with guidance since those require manual adapter changes.
+        </p>
+
+        <h2 id="complexity-estimation">Complexity Estimation</h2>
+        <p>
+          Get pre-migration effort estimates before transforming any code
+          (<span class="badge">Individual+</span>):
+        </p>
+        <p>
+          The complexity estimator analyzes your schema files and produces an effort level
+          for each file: <strong>trivial</strong>, <strong>low</strong>, <strong>moderate</strong>,
+          <strong>high</strong>, or <strong>extreme</strong>. It detects advanced patterns
+          (branded types, recursive schemas, custom validators), performance risks, and
+          provides risk area summaries.
+        </p>
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            Run complexity estimation before migration to identify files that may need
+            manual review. Focus on "high" and "extreme" files first.
+          </p>
+        </div>
+
+        <h2 id="todo-summary">TODO Resolution Summary</h2>
+        <p>
+          After migration, SchemaShift scans all generated <code>TODO(schemashift)</code>
+          comments and produces a categorized summary (<span class="badge" style="background: var(--green)">Free</span>):
+        </p>
+        <ul>
+          <li><strong>branded-types</strong> &mdash; io-ts branded type patterns needing manual conversion</li>
+          <li><strong>io-ts-codecs</strong> &mdash; Codec/decoder patterns with Either monad handling</li>
+          <li><strong>fp-ts-patterns</strong> &mdash; Functional programming patterns from fp-ts</li>
+          <li><strong>form-migration</strong> &mdash; Form library adapter changes needed</li>
+          <li><strong>custom-validation</strong> &mdash; Custom validators requiring manual review</li>
+          <li><strong>manual-review</strong> &mdash; General patterns needing human judgment</li>
+        </ul>
+        <p style="margin-top: 1rem;">
+          Each category includes a resolution guide with specific steps to complete the migration.
+        </p>
+
+        <h2 id="monorepo-migration">Monorepo-Aware Migration</h2>
+        <p>
+          SchemaShift detects monorepo workspace configurations and suggests
+          migration order (<span class="badge">Pro+</span>):
+        </p>
+        <ul>
+          <li>Detects npm, Yarn, and pnpm workspaces from <code>package.json</code></li>
+          <li>Identifies which schema library each package uses</li>
+          <li>Produces a topologically sorted migration order based on inter-package dependencies</li>
+          <li>Ensures leaf packages migrate before dependents to prevent breakage</li>
+        </ul>
+        <div class="callout callout-warning">
+          <div class="callout-title">Note</div>
+          <p>
+            Monorepo detection reads workspace globs from your root <code>package.json</code>.
+            Ensure your workspace configuration is up to date before running detection.
+          </p>
+        </div>
 
         <h2 id="incremental-migration">Incremental Migration</h2>
         <p>
@@ -1617,6 +1753,41 @@ const User = z.object({
               <td>Package.json updates</td>
               <td>✓</td>
               <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Form resolver migration</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Complexity estimation</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>TODO resolution summary</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Monorepo-aware migration</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Ecosystem upgrade commands</td>
+              <td>—</td>
+              <td>—</td>
               <td>✓</td>
               <td>✓</td>
             </tr>

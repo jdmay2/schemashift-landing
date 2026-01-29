@@ -266,7 +266,7 @@
           </div>
           <div class="card">
             <h3>Zod v3&#8594;v4 Coverage</h3>
-            <p>Handles 12+ breaking changes: <code>.merge()</code>, <code>.superRefine()</code>, <code>z.nativeEnum()</code>, <code>.strict()</code>/<code>.passthrough()</code>, error params, <code>.pipe()</code>, and more.</p>
+            <p>Handles 20+ breaking changes: <code>.merge()</code>, <code>.superRefine()</code>, <code>z.nativeEnum()</code>, <code>.flatten()</code>/<code>.format()</code>, <code>._def</code>, error params, <code>.pipe()</code>, and more.</p>
           </div>
           <div class="card">
             <h3>Backup &amp; Rollback</h3>
@@ -275,6 +275,22 @@
           <div class="card">
             <h3>AST-Based Precision</h3>
             <p>Uses ts-morph for real TypeScript AST manipulation, not fragile regex. Handles nested schemas, chained methods, and string-literal safety.</p>
+          </div>
+          <div class="card">
+            <h3>Form Resolver Migration</h3>
+            <p>Automatically rewrites <code>@hookform/resolvers</code> imports during migration &mdash; e.g., <code>yupResolver</code> &#8594; <code>zodResolver</code>. No manual import changes needed.</p>
+          </div>
+          <div class="card">
+            <h3>Complexity Estimation</h3>
+            <p>Pre-migration effort scoring (trivial/low/moderate/high/extreme) with advanced pattern detection, risk areas, and performance warnings.</p>
+          </div>
+          <div class="card">
+            <h3>TODO Resolution Summary</h3>
+            <p>Categorized guidance for all generated <code>TODO(schemashift)</code> comments with actionable resolution steps grouped by type.</p>
+          </div>
+          <div class="card">
+            <h3>Monorepo-Aware Migration</h3>
+            <p>Automatically detects npm/Yarn/pnpm workspaces and suggests topological migration order so dependent packages migrate correctly.</p>
           </div>
         </div>
       </section>
@@ -295,6 +311,7 @@
               <li>1 device</li>
               <li>JSON reports</li>
               <li>Up to 5 custom rules</li>
+              <li>TODO resolution summary</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
               <li class="disabled">Advanced analysis</li>
@@ -321,6 +338,8 @@
               <li>Git integration</li>
               <li>Advanced analysis</li>
               <li>Risk scoring + CSV export</li>
+              <li>Form resolver migration</li>
+              <li>Complexity estimation</li>
               <li class="disabled">CI/CD support</li>
               <li class="disabled">Cross-file resolution</li>
             </ul>
@@ -350,6 +369,8 @@
               <li>Cross-file resolution</li>
               <li>Chain migrations</li>
               <li>Compatibility analyzer</li>
+              <li>Monorepo-aware migration</li>
+              <li>Ecosystem upgrade commands</li>
               <li class="disabled">Custom plugins</li>
               <li class="disabled">Schema governance</li>
             </ul>
@@ -513,6 +534,21 @@
               Enforce naming conventions, complexity limits, and validation
               rules. Extend SchemaShift with custom migration plugins for your
               organization.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Form Resolver &amp; Complexity</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Automatic <code>@hookform/resolvers</code> import rewriting and
+              pre-migration effort scoring with risk area identification and
+              performance warnings.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Monorepo Support</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Workspace detection with topological ordering. Migrates packages
+              in dependency order to prevent breakage across your monorepo.
             </p>
           </div>
         </div>
