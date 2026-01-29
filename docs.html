@@ -251,6 +251,8 @@
           <a href="#migrate">migrate</a>
           <a href="#watch">watch</a>
           <a href="#rollback">rollback</a>
+          <a href="#compat">compat</a>
+          <a href="#governance">governance</a>
           <a href="#license">license</a>
           <a href="#init">init</a>
 
@@ -259,10 +261,25 @@
           <a href="#joi-to-zod">Joi → Zod</a>
           <a href="#zod-v3-to-v4">Zod v3 → v4</a>
           <a href="#io-ts-to-zod">io-ts → Zod</a>
+          <a href="#zod-valibot">Zod ↔ Valibot</a>
+          <a href="#type-helpers">Type Helpers</a>
+          <a href="#form-libraries">Form Libraries</a>
 
           <div class="sidebar-section">Configuration</div>
           <a href="#config-file">Config File</a>
           <a href="#custom-rules">Custom Rules</a>
+          <a href="#governance-config">Governance</a>
+          <a href="#plugins-config">Plugins</a>
+
+          <div class="sidebar-section">Advanced</div>
+          <a href="#advanced-analysis">Analysis</a>
+          <a href="#risk-scoring">Risk Scoring</a>
+          <a href="#cross-file">Cross-File</a>
+          <a href="#chain-migrations">Chain Migrations</a>
+          <a href="#ecosystem-detection">Ecosystem Detection</a>
+          <a href="#standard-schema">Standard Schema</a>
+          <a href="#incremental-migration">Incremental Migration</a>
+          <a href="#package-updates">Package Updates</a>
 
           <div class="sidebar-section">Licensing</div>
           <a href="#tiers">Tiers & Features</a>
@@ -339,6 +356,27 @@
               <td><code>-v, --verbose</code></td>
               <td>Show detailed schema information</td>
             </tr>
+            <tr>
+              <td><code>--detailed</code></td>
+              <td>
+                Full stats with complexity scoring and readiness
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--readiness &lt;path&gt;</code></td>
+              <td>
+                Migration readiness report, e.g. "yup-&gt;zod"
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--complexity</code></td>
+              <td>
+                Per-schema complexity scores
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -388,11 +426,32 @@ Schemas by library:
             </tr>
             <tr>
               <td><code>--report &lt;format&gt;</code></td>
-              <td>Generate report (json, html)</td>
+              <td>Generate report (json, html, csv)</td>
             </tr>
             <tr>
               <td><code>--report-output</code></td>
               <td>Report output path</td>
+            </tr>
+            <tr>
+              <td><code>--chain &lt;path&gt;</code></td>
+              <td>
+                Chain migration, e.g. "yup-&gt;zod-&gt;valibot"
+                <span class="badge">Pro+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--cross-file</code></td>
+              <td>
+                Resolve cross-file schema imports
+                <span class="badge">Pro+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--compat-check</code></td>
+              <td>
+                Run compatibility check before migration
+                <span class="badge">Pro+</span>
+              </td>
             </tr>
             <tr>
               <td><code>--git-branch</code></td>
@@ -410,6 +469,20 @@ Schemas by library:
               <td><code>--ci</code></td>
               <td>CI mode (exit code 1 on failure)</td>
             </tr>
+            <tr>
+              <td><code>--fail-on-warnings</code></td>
+              <td>
+                Exit 1 if any warnings
+                <span class="badge">Team</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--max-risk-score &lt;n&gt;</code></td>
+              <td>
+                Exit 1 if file exceeds risk score (0-100)
+                <span class="badge">Team</span>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -420,11 +493,14 @@ Schemas by library:
 <span class="comment"># With HTML report</span>
 <span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> joi <span class="flag">--to</span> zod <span class="flag">--report</span> html
 
-<span class="comment"># Create branch and auto-commit</span>
-<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--git-branch</span> <span class="flag">--git-commit</span>
+<span class="comment"># Chain migration: Yup → Zod → Valibot</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--chain</span> yup-&gt;zod-&gt;valibot
 
-<span class="comment"># CI mode with JSON report</span>
-<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--ci</span> <span class="flag">--report</span> json</code></pre>
+<span class="comment"># Cross-file with compatibility check</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--cross-file</span> <span class="flag">--compat-check</span>
+
+<span class="comment"># CI mode with risk threshold</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--ci</span> <span class="flag">--fail-on-warnings</span> <span class="flag">--max-risk-score</span> 50</code></pre>
 
         <h2 id="watch">watch</h2>
         <p>
@@ -549,6 +625,41 @@ Schemas by library:
             </tr>
           </tbody>
         </table>
+
+        <h2 id="compat">compat</h2>
+        <p>
+          Check schema library compatibility before migration.
+          <span class="badge">Pro+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift compat</span> &lt;path&gt; [--json]</code></pre>
+        <p>
+          Detects installed library versions from <code>package.json</code> and
+          reports known version-specific issues. For example, Zod v3's
+          <code>.errors</code> property was renamed to <code>.issues</code> in
+          v4, and <code>z.record()</code> now requires a key type argument.
+        </p>
+        <pre><code><span class="comment"># Check compatibility</span>
+<span class="cmd">schemashift compat</span> ./src
+
+<span class="comment"># Machine-readable output</span>
+<span class="cmd">schemashift compat</span> ./src <span class="flag">--json</span></code></pre>
+
+        <h2 id="governance">governance</h2>
+        <p>
+          Run schema governance checks against configurable rules.
+          <span class="badge">Team</span>
+        </p>
+        <pre><code><span class="cmd">schemashift governance</span> &lt;path&gt; [-c config] [--json]</code></pre>
+        <p>
+          Enforces naming conventions, complexity limits, required validations,
+          and more. See
+          <a href="#governance-config">Governance Configuration</a> for setup.
+        </p>
+        <pre><code><span class="comment"># Run governance checks</span>
+<span class="cmd">schemashift governance</span> ./src
+
+<span class="comment"># With custom config</span>
+<span class="cmd">schemashift governance</span> ./src <span class="flag">-c</span> .schemashiftrc.json</code></pre>
 
         <!-- MIGRATIONS -->
         <h2 id="yup-to-zod">Yup → Zod</h2>
@@ -774,27 +885,83 @@ if (!result.success) {
             <tr>
               <th>v3</th>
               <th>v4</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><code>z.record(valueSchema)</code></td>
               <td><code>z.record(z.string(), valueSchema)</code></td>
+              <td>Auto-transformed</td>
             </tr>
             <tr>
               <td><code>error.errors</code></td>
               <td><code>error.issues</code></td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>.merge(other)</code></td>
+              <td><code>.extend(other.shape)</code></td>
+              <td>Auto-transformed + warning</td>
+            </tr>
+            <tr>
+              <td><code>z.nativeEnum(X)</code></td>
+              <td><code>z.enum(X)</code></td>
+              <td>Auto-transformed + warning</td>
+            </tr>
+            <tr>
+              <td><code>.superRefine()</code></td>
+              <td><code>.check()</code></td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>.strict()</code></td>
+              <td><code>z.strictObject()</code></td>
+              <td>Deprecation warning</td>
+            </tr>
+            <tr>
+              <td><code>.passthrough()</code></td>
+              <td><code>z.looseObject()</code></td>
+              <td>Deprecation warning</td>
+            </tr>
+            <tr>
+              <td><code>.pipe()</code></td>
+              <td><code>.pipe()</code> (stricter)</td>
+              <td>Behavior warning</td>
+            </tr>
+            <tr>
+              <td><code>invalid_type_error / required_error</code></td>
+              <td>Unified <code>error</code> param</td>
+              <td>Auto-transformed</td>
+            </tr>
+            <tr>
+              <td><code>instanceof Error</code> on ZodError</td>
+              <td>ZodError no longer extends Error</td>
+              <td>Runtime warning</td>
+            </tr>
+            <tr>
+              <td><code>.refine().transform()</code></td>
+              <td><code>.transform()</code> runs even if refine fails</td>
+              <td>Runtime warning</td>
+            </tr>
+            <tr>
+              <td><code>.default().optional()</code></td>
+              <td><code>.optional()</code> is effectively a no-op</td>
+              <td>Runtime warning</td>
             </tr>
             <tr>
               <td><code>error.flatten()</code></td>
-              <td><code>z.prettifyError(error)</code></td>
+              <td><code>z.treeifyError()</code></td>
+              <td>Removal warning</td>
             </tr>
             <tr>
-              <td><code>z.strictObject()</code></td>
-              <td><code>z.object().strict()</code></td>
+              <td><code>error.format()</code></td>
+              <td><code>z.treeifyError()</code></td>
+              <td>Removal warning</td>
             </tr>
           </tbody>
         </table>
+        <p style="margin-top: 1rem; color: var(--muted);">Zod v4 also delivers up to 14x faster parsing performance. See the <a href="https://zod.dev/v4/changelog" style="color: var(--accent);">Zod v4 changelog</a> for the full list of changes.</p>
 
         <h2 id="io-ts-to-zod">io-ts → Zod</h2>
         <p><strong>Available in: Pro, Team</strong></p>
@@ -825,6 +992,131 @@ const User = z.object({
             after migration.
           </p>
         </div>
+
+        <h2 id="zod-valibot">Zod ↔ Valibot</h2>
+        <p><strong>Available in: Pro, Team</strong></p>
+        <p>Convert between Zod and Valibot schemas:</p>
+        <pre><code><span class="comment"># Zod to Valibot</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> zod <span class="flag">--to</span> valibot
+
+<span class="comment"># Valibot to Zod</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> valibot <span class="flag">--to</span> zod</code></pre>
+
+        <h3>Key Mappings</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Zod</th>
+              <th>Valibot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>z.string()</code></td>
+              <td><code>v.string()</code></td>
+            </tr>
+            <tr>
+              <td><code>z.object({...})</code></td>
+              <td><code>v.object({...})</code></td>
+            </tr>
+            <tr>
+              <td><code>z.enum([...])</code></td>
+              <td><code>v.picklist([...])</code></td>
+            </tr>
+            <tr>
+              <td><code>.min(n)</code></td>
+              <td><code>v.pipe(schema, v.minLength(n))</code></td>
+            </tr>
+            <tr>
+              <td><code>.optional()</code></td>
+              <td><code>v.optional(schema)</code></td>
+            </tr>
+            <tr>
+              <td><code>.nullable()</code></td>
+              <td><code>v.nullable(schema)</code></td>
+            </tr>
+            <tr>
+              <td><code>.refine(fn)</code></td>
+              <td><code>v.check(fn)</code></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout callout-warning">
+          <div class="callout-title">Note</div>
+          <p>
+            Valibot uses a functional pipe-based API rather than method chaining.
+            Complex Zod schemas with deep chaining may need manual adjustment
+            after migration.
+          </p>
+        </div>
+
+        <!-- TYPE HELPER MIGRATION -->
+        <h2 id="type-helpers">Type Helper Migration</h2>
+        <p>SchemaShift automatically converts type inference helpers when migrating between libraries:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Target</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>yup.InferType&lt;typeof schema&gt;</code></td>
+              <td><code>z.infer&lt;typeof schema&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>Joi.extractType&lt;typeof schema&gt;</code></td>
+              <td><code>z.infer&lt;typeof schema&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>t.TypeOf&lt;typeof schema&gt;</code></td>
+              <td><code>z.infer&lt;typeof schema&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>t.OutputOf&lt;typeof schema&gt;</code></td>
+              <td><code>z.output&lt;typeof schema&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>z.infer&lt;typeof schema&gt;</code></td>
+              <td><code>v.InferOutput&lt;typeof schema&gt;</code></td>
+            </tr>
+            <tr>
+              <td><code>z.input&lt;typeof schema&gt;</code></td>
+              <td><code>v.InferInput&lt;typeof schema&gt;</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- FORM LIBRARY COMPATIBILITY -->
+        <h2 id="form-libraries">Form Library Compatibility</h2>
+        <p>SchemaShift detects form library imports and warns you to update resolvers/adapters after migration:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Form Library</th>
+              <th>Detected Imports</th>
+              <th>Action Needed</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>react-hook-form</td>
+              <td><code>react-hook-form</code>, <code>@hookform/resolvers/*</code></td>
+              <td>Switch resolver (e.g. <code>@hookform/resolvers/zod</code>)</td>
+            </tr>
+            <tr>
+              <td>Formik</td>
+              <td><code>formik</code></td>
+              <td>Update validation adapter to match target library</td>
+            </tr>
+            <tr>
+              <td>Mantine Form</td>
+              <td><code>@mantine/form</code></td>
+              <td>Update <code>zodResolver</code> or equivalent for target library</td>
+            </tr>
+          </tbody>
+        </table>
 
         <!-- CONFIGURATION -->
         <h2 id="config-file">Config File</h2>
@@ -926,6 +1218,245 @@ const User = z.object({
   ]
 }</code></pre>
 
+        <h2 id="governance-config">Governance Configuration</h2>
+        <p>
+          Configure schema governance rules in your config file
+          (<span class="badge">Team</span>):
+        </p>
+        <pre><code>{
+  <span class="string">"governance"</span>: {
+    <span class="string">"rules"</span>: {
+      <span class="string">"naming-convention"</span>: { <span class="string">"pattern"</span>: <span class="string">".*Schema$"</span> },
+      <span class="string">"max-complexity"</span>: { <span class="string">"threshold"</span>: 80 },
+      <span class="string">"no-any"</span>: {},
+      <span class="string">"required-validations"</span>: {}
+    },
+    <span class="string">"failOnViolation"</span>: true
+  }
+}</code></pre>
+        <p>Built-in rules:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Rule</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>naming-convention</code></td>
+              <td>
+                Schemas must match a regex pattern (default:
+                <code>.*Schema$</code>)
+              </td>
+            </tr>
+            <tr>
+              <td><code>max-complexity</code></td>
+              <td>Reject schemas above a complexity score threshold</td>
+            </tr>
+            <tr>
+              <td><code>no-any</code></td>
+              <td>
+                Disallow <code>z.any()</code> and equivalents (severity: error)
+              </td>
+            </tr>
+            <tr>
+              <td><code>required-validations</code></td>
+              <td>
+                String schemas must include <code>.max()</code> for length safety
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="plugins-config">Plugin Configuration</h2>
+        <p>
+          Load custom plugins from npm packages or local files
+          (<span class="badge">Team</span>):
+        </p>
+        <pre><code>{
+  <span class="string">"plugins"</span>: [<span class="string">"./my-plugin.js"</span>, <span class="string">"@my-org/schemashift-plugin"</span>]
+}</code></pre>
+        <p>
+          Plugins export a <code>SchemaShiftPlugin</code> interface with
+          optional transform handlers and custom rules. See the
+          <a href="https://github.com/qwady/schemashift">GitHub repo</a> for
+          plugin development documentation.
+        </p>
+
+        <!-- ADVANCED FEATURES -->
+        <h2 id="advanced-analysis">Advanced Analysis</h2>
+        <p>
+          Analyze schema complexity and migration readiness
+          (<span class="badge">Individual+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--detailed</span>
+<span class="cmd">schemashift analyze</span> ./src <span class="flag">--readiness</span> yup-&gt;zod
+<span class="cmd">schemashift analyze</span> ./src <span class="flag">--complexity</span> <span class="flag">--json</span></code></pre>
+        <p>
+          Complexity scoring considers chain length, nesting depth, and
+          validation count. Scores are rated as
+          <strong>low</strong> (0-25), <strong>medium</strong> (26-50),
+          <strong>high</strong> (51-75), or <strong>critical</strong> (76-100).
+        </p>
+
+        <h2 id="risk-scoring">Risk Scoring</h2>
+        <p>
+          Each migrated file receives a risk score based on warnings, errors, and
+          manual review items (<span class="badge">Individual+</span>). Use
+          <code>--max-risk-score</code> in CI to enforce quality thresholds:
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--ci</span> <span class="flag">--max-risk-score</span> 50</code></pre>
+        <p>Export risk data for project tracking:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--report</span> csv</code></pre>
+
+        <h2 id="cross-file">Cross-File Resolution</h2>
+        <p>
+          Resolve schema imports across files and transform in dependency order
+          (<span class="badge">Pro+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--cross-file</span></code></pre>
+        <p>
+          SchemaShift builds a dependency graph, detects circular dependencies,
+          and applies transformations in topologically sorted order.
+        </p>
+
+        <h2 id="chain-migrations">Chain Migrations</h2>
+        <p>
+          Perform multi-step migrations in a single command
+          (<span class="badge">Pro+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--chain</span> yup-&gt;zod-&gt;valibot</code></pre>
+        <p>
+          Each step validates intermediate output before proceeding. Combined
+          reports include all steps. Use instead of <code>--from</code> /
+          <code>--to</code>.
+        </p>
+
+        <h2 id="ecosystem-detection">Ecosystem Detection</h2>
+        <p>
+          SchemaShift detects third-party packages in your project that may break
+          or need updates during migration
+          (<span class="badge">Pro+</span>):
+        </p>
+        <p>
+          When you run <code>--compat-check</code>, SchemaShift automatically
+          scans your <code>package.json</code> for ecosystem dependencies and
+          reports compatibility issues before migration begins.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Package</th>
+              <th>Affected Migration</th>
+              <th>Issue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>drizzle-zod</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Needs v4-compatible version</td>
+            </tr>
+            <tr>
+              <td><code>@trpc/server</code> v10</td>
+              <td>zod-v3 → v4</td>
+              <td>tRPC v10 expects Zod v3 types</td>
+            </tr>
+            <tr>
+              <td><code>zod-validation-error</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Must upgrade to v5.0.0+</td>
+            </tr>
+            <tr>
+              <td><code>@hookform/resolvers</code></td>
+              <td>any → zod, zod-v3 → v4</td>
+              <td>Resolver version must match schema lib</td>
+            </tr>
+            <tr>
+              <td><code>zod-openapi</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Needs v4-compatible version</td>
+            </tr>
+            <tr>
+              <td><code>zod-prisma</code></td>
+              <td>zod-v3 → v4</td>
+              <td>Generated schemas may need regeneration</td>
+            </tr>
+            <tr>
+              <td><code>formik</code></td>
+              <td>yup → zod</td>
+              <td>Must switch form adapter</td>
+            </tr>
+            <tr>
+              <td><code>@mantine/form</code></td>
+              <td>yup → zod</td>
+              <td>Must switch schema adapter</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <pre><code><span class="comment"># Run ecosystem detection as part of compat check</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> zod-v3 <span class="flag">--to</span> v4 <span class="flag">--compat-check</span>
+
+<span class="comment"># Or standalone compatibility check</span>
+<span class="cmd">schemashift compat</span> ./src</code></pre>
+
+        <h2 id="standard-schema">Standard Schema</h2>
+        <p>
+          SchemaShift detects
+          <a href="https://github.com/standard-schema/standard-schema">Standard Schema</a>
+          1.0 compatible libraries in your project. This helps you understand
+          interoperability options between schema libraries.
+        </p>
+        <p>
+          Compatible libraries include Zod v3.23+, Valibot v1+, ArkType v2+,
+          @effect/schema, and TypeBox v0.34+. Detection is included in the
+          <code>analyze</code> command output (FREE tier).
+        </p>
+
+        <h2 id="incremental-migration">Incremental Migration</h2>
+        <p>
+          Migrate large projects file-by-file with progress tracking
+          (<span class="badge">Pro+</span>):
+        </p>
+        <p>
+          The incremental tracker persists state to
+          <code>.schemashift/incremental.json</code>, allowing you to pause and
+          resume migrations across sessions. Track completed, failed, and
+          remaining files with percentage progress.
+        </p>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            Incremental migration is ideal for large codebases where you want to
+            migrate a few files at a time, verify correctness, and continue later.
+          </p>
+        </div>
+
+        <h2 id="package-updates">Package Updates</h2>
+        <p>
+          SchemaShift can plan and apply dependency changes to your
+          <code>package.json</code> during migration:
+        </p>
+        <ul>
+          <li>Adds the target library if not already installed (e.g., adds <code>zod</code> for yup→zod)</li>
+          <li>Updates version ranges when needed (e.g., <code>zod ^3.x</code> → <code>^4.0.0</code> for v3→v4)</li>
+          <li>Suggests removal of source libraries after migration (never auto-removes)</li>
+          <li>Handles both <code>dependencies</code> and <code>devDependencies</code></li>
+        </ul>
+
+        <div class="callout callout-warning">
+          <div class="callout-title">Note</div>
+          <p>
+            SchemaShift never automatically removes source libraries. It only
+            suggests removal after you verify all schemas have been migrated.
+            Run <code>npm install</code> after applying package changes.
+          </p>
+        </div>
+
         <!-- LICENSING -->
         <h2 id="tiers">Tiers & Features</h2>
 
@@ -940,6 +1471,9 @@ const User = z.object({
             </tr>
           </thead>
           <tbody>
+            <tr>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">Migrations</td>
+            </tr>
             <tr>
               <td>Files per migration</td>
               <td>5</td>
@@ -983,11 +1517,14 @@ const User = z.object({
               <td>✓</td>
             </tr>
             <tr>
-              <td>Devices</td>
-              <td>1</td>
-              <td>1</td>
-              <td>4</td>
-              <td>Unlimited</td>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">Reports & Output</td>
+            </tr>
+            <tr>
+              <td>JSON reports</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
             </tr>
             <tr>
               <td>HTML reports</td>
@@ -995,6 +1532,96 @@ const User = z.object({
               <td>✓</td>
               <td>✓</td>
               <td>✓</td>
+            </tr>
+            <tr>
+              <td>CSV export</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">Analysis & Safety</td>
+            </tr>
+            <tr>
+              <td>Custom rules</td>
+              <td>Up to 5</td>
+              <td>Unlimited</td>
+              <td>Unlimited</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <td>Git integration</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Advanced analysis</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Risk scoring</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Compatibility checking</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Cross-file resolution</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Chain migrations</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Ecosystem detection</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Incremental migration</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Standard Schema detection</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Package.json updates</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">CI/CD & Automation</td>
             </tr>
             <tr>
               <td>CI/CD support</td>
@@ -1008,6 +1635,44 @@ const User = z.object({
               <td>—</td>
               <td>—</td>
               <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td><code>--fail-on-warnings</code></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td><code>--max-risk-score</code></td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">Enterprise</td>
+            </tr>
+            <tr>
+              <td>Devices</td>
+              <td>1</td>
+              <td>1</td>
+              <td>4</td>
+              <td>Unlimited</td>
+            </tr>
+            <tr>
+              <td>Custom plugins</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Schema governance</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
               <td>✓</td>
             </tr>
           </tbody>
@@ -1105,6 +1770,7 @@ jobs:
           <li><code>joi</code> → <code>zod</code></li>
           <li><code>zod-v3</code> → <code>v4</code></li>
           <li><code>io-ts</code> → <code>zod</code></li>
+          <li><code>zod</code> ↔ <code>valibot</code></li>
         </ul>
 
         <h3>Transformation produces incorrect code</h3>

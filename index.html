@@ -249,6 +249,36 @@
         <code class="install-cmd">npm install -g schemashift-cli</code>
       </header>
 
+      <section class="migrations-section">
+        <h2>Why Migrate With SchemaShift?</h2>
+        <div class="migration-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
+          <div class="card">
+            <h3>Automatic Type Helpers</h3>
+            <p>Converts <code>InferType</code>, <code>TypeOf</code>, <code>z.infer</code>, and <code>v.InferOutput</code> across all supported libraries automatically.</p>
+          </div>
+          <div class="card">
+            <h3>Inline TODO Comments</h3>
+            <p>Unsupported patterns get <code>/* TODO(schemashift): ... */</code> comments with actionable guidance and links, so nothing is silently dropped.</p>
+          </div>
+          <div class="card">
+            <h3>Form Library Awareness</h3>
+            <p>Detects react-hook-form, Formik, and Mantine imports and warns you to update resolver/adapter packages for the target library.</p>
+          </div>
+          <div class="card">
+            <h3>Zod v3&#8594;v4 Coverage</h3>
+            <p>Handles 12+ breaking changes: <code>.merge()</code>, <code>.superRefine()</code>, <code>z.nativeEnum()</code>, <code>.strict()</code>/<code>.passthrough()</code>, error params, <code>.pipe()</code>, and more.</p>
+          </div>
+          <div class="card">
+            <h3>Backup &amp; Rollback</h3>
+            <p>Every migration creates a timestamped backup. Use <code>schemashift rollback</code> to restore originals if anything goes wrong.</p>
+          </div>
+          <div class="card">
+            <h3>AST-Based Precision</h3>
+            <p>Uses ts-morph for real TypeScript AST manipulation, not fragile regex. Handles nested schemas, chained methods, and string-literal safety.</p>
+          </div>
+        </div>
+      </section>
+
       <section class="pricing-section">
         <h2>Simple Pricing</h2>
         <p class="pricing-subtitle">Start free. Upgrade when you need more.</p>
@@ -264,8 +294,11 @@
               <li>Yup to Zod only</li>
               <li>1 device</li>
               <li>JSON reports</li>
+              <li>Up to 5 custom rules</li>
+              <li class="disabled">HTML reports</li>
+              <li class="disabled">Git integration</li>
+              <li class="disabled">Advanced analysis</li>
               <li class="disabled">CI/CD support</li>
-              <li class="disabled">Watch mode</li>
             </ul>
             <a
               href="https://www.npmjs.com/package/schemashift"
@@ -285,8 +318,11 @@
               <li>Yup, Joi, Zod v3-v4</li>
               <li>1 device</li>
               <li>HTML reports</li>
+              <li>Git integration</li>
+              <li>Advanced analysis</li>
+              <li>Risk scoring + CSV export</li>
               <li class="disabled">CI/CD support</li>
-              <li class="disabled">Watch mode</li>
+              <li class="disabled">Cross-file resolution</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_1Wgutqm927aHklDmVkuRy9R397qGNuKnxzCcB4P4r7q"
@@ -307,11 +343,15 @@
             <div class="price-note">One-time payment</div>
             <ul class="features">
               <li>Unlimited files</li>
-              <li>All migrations</li>
+              <li>All migrations (io-ts, Valibot)</li>
               <li>4 devices</li>
-              <li>HTML reports</li>
-              <li>CI/CD support</li>
-              <li>Watch mode</li>
+              <li>HTML/JSON/CSV reports</li>
+              <li>CI/CD support + watch mode</li>
+              <li>Cross-file resolution</li>
+              <li>Chain migrations</li>
+              <li>Compatibility analyzer</li>
+              <li class="disabled">Custom plugins</li>
+              <li class="disabled">Schema governance</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_lXgqwCT59i2Bi4IPyHWvAr0NmxnUSzWPQgIG140tULV"
@@ -339,12 +379,12 @@
             </div>
             <div class="price-note">Recurring payment</div>
             <ul class="features">
-              <li>Unlimited files</li>
-              <li>All migrations</li>
+              <li>Everything in Pro</li>
               <li>Unlimited devices</li>
-              <li>HTML reports</li>
-              <li>CI/CD support</li>
-              <li>Watch mode</li>
+              <li>Custom plugins</li>
+              <li>Schema governance</li>
+              <li>--fail-on-warnings</li>
+              <li>--max-risk-score threshold</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_vFMywDBsSyYygwrlthhL6uZeeKptrsKf2L5wi108Qxs"
@@ -409,9 +449,79 @@
         </table>
       </section>
 
+      <section class="migrations-section">
+        <h2>Advanced Features</h2>
+        <p
+          style="
+            text-align: center;
+            color: var(--muted);
+            margin-bottom: 2rem;
+          "
+        >
+          Beyond basic migration. SchemaShift provides deep analysis and
+          enterprise-grade controls.
+        </p>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+          "
+        >
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Advanced Analysis</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Deep complexity scoring, migration readiness assessment, and
+              detailed schema introspection to understand migration impact before
+              you start.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Risk Scoring</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Per-file risk assessment with configurable thresholds. Export to
+              CSV for project tracking. Fail CI builds that exceed your risk
+              tolerance.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Cross-File Resolution</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Dependency graph analysis resolves schema imports across files,
+              ensuring multi-file projects migrate in the correct order.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Chain Migrations</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Multi-step migrations like
+              <code style="color: var(--green)">yup&rarr;zod&rarr;valibot</code>
+              in a single command with automatic intermediate validation.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Compatibility Checking</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Pre-migration validation detects version-specific incompatible
+              patterns and provides actionable suggestions before transforming
+              code.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Governance &amp; Plugins</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Enforce naming conventions, complexity limits, and validation
+              rules. Extend SchemaShift with custom migration plugins for your
+              organization.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <footer>
         <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
         <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> ·
           <a href="https://github.com/qwady/schemashift">GitHub</a> ·
           <a href="https://www.npmjs.com/package/schemashift">npm</a> ·
           <a href="mailto:support@qwady.com">Support</a>
