@@ -292,6 +292,34 @@
             <h3>Monorepo-Aware Migration</h3>
             <p>Automatically detects npm/Yarn/pnpm workspaces and suggests topological migration order so dependent packages migrate correctly.</p>
           </div>
+          <div class="card">
+            <h3>Behavioral Warnings</h3>
+            <p>Detects coercion, validation order, and error format differences between libraries before you migrate. Know exactly what changes.</p>
+          </div>
+          <div class="card">
+            <h3>Bundle Size Estimation</h3>
+            <p>Estimates minified+gzipped size impact of switching schema libraries. See the delta before committing to a migration.</p>
+          </div>
+          <div class="card">
+            <h3>Performance Analysis</h3>
+            <p>Identifies validation speed changes, parse overhead differences, and runtime behavior impacts for your specific migration path.</p>
+          </div>
+          <div class="card">
+            <h3>Type Deduplication</h3>
+            <p>Finds structurally similar schemas across your codebase with confidence scoring. Clean up before or after migration.</p>
+          </div>
+          <div class="card">
+            <h3>Test Scaffolding</h3>
+            <p>Generates validation test stubs for every migrated schema. Verify correctness automatically after migration.</p>
+          </div>
+          <div class="card">
+            <h3>Audit Logging</h3>
+            <p>Records detailed per-file migration history with timestamps, status, and warnings. Full compliance trail for enterprise teams.</p>
+          </div>
+          <div class="card">
+            <h3>Backward Migrations</h3>
+            <p>Migrate back from Zod to Yup or from Valibot to Zod. Full bidirectional support for when requirements change.</p>
+          </div>
         </div>
       </section>
 
@@ -312,6 +340,7 @@
               <li>JSON reports</li>
               <li>Up to 5 custom rules</li>
               <li>TODO resolution summary</li>
+              <li>Behavioral warnings</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
               <li class="disabled">Advanced analysis</li>
@@ -340,6 +369,9 @@
               <li>Risk scoring + CSV export</li>
               <li>Form resolver migration</li>
               <li>Complexity estimation</li>
+              <li>Bundle size estimation</li>
+              <li>Performance analysis</li>
+              <li>Type deduplication</li>
               <li class="disabled">CI/CD support</li>
               <li class="disabled">Cross-file resolution</li>
             </ul>
@@ -362,7 +394,7 @@
             <div class="price-note">One-time payment</div>
             <ul class="features">
               <li>Unlimited files</li>
-              <li>All migrations (io-ts, Valibot)</li>
+              <li>All forward + backward migrations</li>
               <li>4 devices</li>
               <li>HTML/JSON/CSV reports</li>
               <li>CI/CD support + watch mode</li>
@@ -371,8 +403,10 @@
               <li>Compatibility analyzer</li>
               <li>Monorepo-aware migration</li>
               <li>Ecosystem upgrade commands</li>
+              <li>Test scaffolding</li>
               <li class="disabled">Custom plugins</li>
               <li class="disabled">Schema governance</li>
+              <li class="disabled">Audit logging</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_lXgqwCT59i2Bi4IPyHWvAr0NmxnUSzWPQgIG140tULV"
@@ -406,6 +440,7 @@
               <li>Schema governance</li>
               <li>--fail-on-warnings</li>
               <li>--max-risk-score threshold</li>
+              <li>Audit logging</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_vFMywDBsSyYygwrlthhL6uZeeKptrsKf2L5wi108Qxs"
@@ -460,7 +495,21 @@
               <td class="check">✓</td>
             </tr>
             <tr>
-              <td>Valibot conversions</td>
+              <td>Zod ↔ Valibot</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Zod → Yup</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Valibot → Zod</td>
               <td class="cross">—</td>
               <td class="cross">—</td>
               <td class="check">✓</td>

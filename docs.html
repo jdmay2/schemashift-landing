@@ -254,6 +254,7 @@
           <a href="#compat">compat</a>
           <a href="#governance">governance</a>
           <a href="#license">license</a>
+          <a href="#pricing-cmd">pricing</a>
           <a href="#init">init</a>
 
           <div class="sidebar-section">Migrations</div>
@@ -262,6 +263,8 @@
           <a href="#zod-v3-to-v4">Zod v3 → v4</a>
           <a href="#io-ts-to-zod">io-ts → Zod</a>
           <a href="#zod-valibot">Zod ↔ Valibot</a>
+          <a href="#zod-to-yup">Zod → Yup</a>
+          <a href="#valibot-to-zod">Valibot → Zod</a>
           <a href="#type-helpers">Type Helpers</a>
           <a href="#form-libraries">Form Libraries</a>
 
@@ -282,6 +285,12 @@
           <a href="#complexity-estimation">Complexity Estimation</a>
           <a href="#todo-summary">TODO Summary</a>
           <a href="#monorepo-migration">Monorepo Migration</a>
+          <a href="#behavioral-warnings">Behavioral Warnings</a>
+          <a href="#bundle-estimation">Bundle Estimation</a>
+          <a href="#performance-analysis">Performance Analysis</a>
+          <a href="#type-deduplication">Type Deduplication</a>
+          <a href="#test-scaffolding">Test Scaffolding</a>
+          <a href="#audit-logging">Audit Logging</a>
           <a href="#incremental-migration">Incremental Migration</a>
           <a href="#package-updates">Package Updates</a>
 
@@ -378,6 +387,34 @@
               <td><code>--complexity</code></td>
               <td>
                 Per-schema complexity scores
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--behavioral &lt;migration&gt;</code></td>
+              <td>
+                Behavioral difference warnings, e.g. "yup-&gt;zod"
+                <span class="badge" style="background: var(--green)">Free</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--bundle &lt;migration&gt;</code></td>
+              <td>
+                Bundle size estimation, e.g. "zod-&gt;valibot"
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--performance &lt;migration&gt;</code></td>
+              <td>
+                Performance impact analysis, e.g. "zod-v3-&gt;v4"
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--dedup</code></td>
+              <td>
+                Detect duplicate type definitions
                 <span class="badge">Individual+</span>
               </td>
             </tr>
@@ -484,6 +521,20 @@ Schemas by library:
               <td><code>--max-risk-score &lt;n&gt;</code></td>
               <td>
                 Exit 1 if file exceeds risk score (0-100)
+                <span class="badge">Team</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--scaffold-tests</code></td>
+              <td>
+                Generate validation tests after migration
+                <span class="badge">Pro+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--audit</code></td>
+              <td>
+                Enable migration audit logging
                 <span class="badge">Team</span>
               </td>
             </tr>
@@ -610,6 +661,11 @@ Schemas by library:
 
 <span class="comment"># Deactivate to move to another device</span>
 <span class="cmd">schemashift license</span> <span class="flag">--deactivate</span></code></pre>
+
+        <h2 id="pricing-cmd">pricing</h2>
+        <p>Display pricing information and available tier features.</p>
+        <pre><code><span class="cmd">schemashift pricing</span></code></pre>
+        <p>Shows a summary of all tiers, their prices, supported migrations, and key features.</p>
 
         <h2 id="init">init</h2>
         <p>Create a <code>.schemashiftrc.json</code> configuration file.</p>
@@ -1073,6 +1129,50 @@ const User = z.object({
             after migration.
           </p>
         </div>
+
+        <h2 id="zod-to-yup">Zod → Yup (Backward Migration)</h2>
+        <p><strong>Available in: Pro, Team</strong></p>
+        <p>AST-based backward migration converting Zod schemas to Yup equivalents:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> zod <span class="flag">--to</span> yup</code></pre>
+        <pre><code><span class="comment">// Before (Zod)</span>
+import { z } from <span class="string">'zod'</span>;
+
+const userSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().positive().optional(),
+});
+
+<span class="comment">// After (Yup)</span>
+import * as yup from <span class="string">'yup'</span>;
+
+const userSchema = yup.object({
+  name: yup.string().required(),
+  email: yup.string().email().required(),
+  age: yup.number().positive().notRequired(),
+});</code></pre>
+
+        <h2 id="valibot-to-zod">Valibot → Zod (Backward Migration)</h2>
+        <p><strong>Available in: Pro, Team</strong></p>
+        <p>Text-based backward migration converting Valibot schemas to Zod:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> valibot <span class="flag">--to</span> zod</code></pre>
+        <pre><code><span class="comment">// Before (Valibot)</span>
+import * as v from <span class="string">'valibot'</span>;
+
+const productSchema = v.object({
+  name: v.pipe(v.string(), v.minLength(1)),
+  price: v.pipe(v.number(), v.minValue(0)),
+  status: v.picklist([<span class="string">'active'</span>, <span class="string">'archived'</span>]),
+});
+
+<span class="comment">// After (Zod)</span>
+import { z } from <span class="string">'zod'</span>;
+
+const productSchema = z.object({
+  name: z.string().min(1),
+  price: z.number().min(0),
+  status: z.enum([<span class="string">'active'</span>, <span class="string">'archived'</span>]),
+});</code></pre>
 
         <!-- TYPE HELPER MIGRATION -->
         <h2 id="type-helpers">Type Helper Migration</h2>
@@ -1552,6 +1652,74 @@ const User = z.object({
           </p>
         </div>
 
+        <h2 id="behavioral-warnings">Behavioral Warnings</h2>
+        <p>
+          Detect behavioral differences between schema libraries before migration
+          (<span class="badge" style="background: var(--green)">Free</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--behavioral</span> yup-&gt;zod</code></pre>
+        <p>
+          Identifies coercion differences (e.g., Yup auto-coerces strings to numbers, Zod does not),
+          validation order changes, and error format differences. Warnings are grouped by category
+          with severity levels to help you prepare for migration.
+        </p>
+
+        <h2 id="bundle-estimation">Bundle Size Estimation</h2>
+        <p>
+          Estimate the bundle size impact of switching schema libraries
+          (<span class="badge">Individual+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--bundle</span> zod-&gt;valibot</code></pre>
+        <p>
+          Compares minified+gzipped library sizes and reports the estimated delta in kB and
+          percentage. Useful for understanding the size impact before committing to a migration.
+        </p>
+
+        <h2 id="performance-analysis">Performance Impact Analysis</h2>
+        <p>
+          Identify potential performance changes from your migration
+          (<span class="badge">Individual+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--performance</span> zod-v3-&gt;v4</code></pre>
+        <p>
+          Reports validation speed differences, parse vs safeParse overhead, and runtime behavior
+          impacts. Warnings are severity-rated (error, warning, info) with detailed explanations.
+        </p>
+
+        <h2 id="type-deduplication">Type Deduplication Detection</h2>
+        <p>
+          Find structurally similar schema definitions across your codebase
+          (<span class="badge">Individual+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--dedup</span></code></pre>
+        <p>
+          Identifies duplicate schemas with confidence scores. Clean up redundant definitions
+          before or after migration to reduce maintenance burden.
+        </p>
+
+        <h2 id="test-scaffolding">Test Scaffolding</h2>
+        <p>
+          Generate validation test files after migration
+          (<span class="badge">Pro+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--scaffold-tests</span></code></pre>
+        <p>
+          Creates test stubs for each migrated schema in <code>.schemashift/tests/</code>.
+          Each test file includes basic validation checks to verify the migration preserved behavior.
+        </p>
+
+        <h2 id="audit-logging">Audit Logging</h2>
+        <p>
+          Record detailed migration history for compliance
+          (<span class="badge">Team</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--from</span> yup <span class="flag">--to</span> zod <span class="flag">--audit</span></code></pre>
+        <p>
+          Logs each file transform with timestamps, success/failure status, and warning counts.
+          The audit log is persisted to <code>.schemashift/audit-log.json</code> for enterprise
+          compliance and traceability.
+        </p>
+
         <h2 id="incremental-migration">Incremental Migration</h2>
         <p>
           Migrate large projects file-by-file with progress tracking
@@ -1646,7 +1814,21 @@ const User = z.object({
               <td>✓</td>
             </tr>
             <tr>
-              <td>Valibot conversions</td>
+              <td>Zod ↔ Valibot</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Zod → Yup</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Valibot → Zod</td>
               <td>—</td>
               <td>—</td>
               <td>✓</td>
@@ -1792,6 +1974,41 @@ const User = z.object({
               <td>✓</td>
             </tr>
             <tr>
+              <td>Behavioral warnings</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Bundle size estimation</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Performance analysis</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Type deduplication</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Test scaffolding</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
               <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">CI/CD & Automation</td>
             </tr>
             <tr>
@@ -1841,6 +2058,13 @@ const User = z.object({
             </tr>
             <tr>
               <td>Schema governance</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Audit logging</td>
               <td>—</td>
               <td>—</td>
               <td>—</td>
@@ -1942,6 +2166,8 @@ jobs:
           <li><code>zod-v3</code> → <code>v4</code></li>
           <li><code>io-ts</code> → <code>zod</code></li>
           <li><code>zod</code> ↔ <code>valibot</code></li>
+          <li><code>zod</code> → <code>yup</code></li>
+          <li><code>valibot</code> → <code>zod</code></li>
         </ul>
 
         <h3>Transformation produces incorrect code</h3>
