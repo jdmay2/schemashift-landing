@@ -348,6 +348,42 @@
             <h3>Cross-Field Validation Helpers</h3>
             <p>Reusable <code>.superRefine()</code> patterns for common cross-field logic: <code>requireIf</code>, <code>requireOneOf</code>, <code>mutuallyExclusive</code>, and <code>dependentFields</code>.</p>
           </div>
+          <div class="card">
+            <h3>Project Health Doctor</h3>
+            <p>Run <code>schemashift doctor</code> to diagnose your project: detect schema libraries, flag outdated versions, check form compatibility, and get actionable migration suggestions.</p>
+          </div>
+          <div class="card">
+            <h3>Schema Verification</h3>
+            <p>Contract testing for migrated schemas. Extracts schema names, generates test samples, and verifies migrated schemas produce the same validation behavior as originals.</p>
+          </div>
+          <div class="card">
+            <h3>Canary Migration</h3>
+            <p>Migrate a percentage of files first with <code>--canary 20</code>. Starts with the simplest files, letting you verify before committing to a full migration.</p>
+          </div>
+          <div class="card">
+            <h3>Unified Diff Export</h3>
+            <p>Export standard unified diffs with <code>--output-diff</code> for integration with <code>git apply</code>, code review tools, and CI pipelines. Works with dry-run mode.</p>
+          </div>
+          <div class="card">
+            <h3>Compliance Reports</h3>
+            <p>Generate SOC2 and HIPAA compliance reports from migration audit logs. Includes change control summaries, integrity verification, and access control records.</p>
+          </div>
+          <div class="card">
+            <h3>Multi-Platform CI/CD</h3>
+            <p>Ready-to-use templates for GitHub Actions, GitLab CI, and Azure DevOps. Includes JUnit test reporting, artifact publishing, and governance checks.</p>
+          </div>
+          <div class="card">
+            <h3>Pre-Commit Hooks</h3>
+            <p>Integrate governance checks into your git workflow with <code>schemashift hooks install</code>. Detects husky and lint-staged automatically.</p>
+          </div>
+          <div class="card">
+            <h3>Policy-as-Code</h3>
+            <p>Manage schema governance policies with <code>schemashift policy</code>. Initialize from templates, check compliance, and list active policies for your organization.</p>
+          </div>
+          <div class="card">
+            <h3>Duration Estimation</h3>
+            <p>Get pre-migration time estimates based on complexity analysis. Ranges from minutes (trivial) to hours (extreme) based on schema count and advanced patterns.</p>
+          </div>
         </div>
       </section>
 
@@ -362,8 +398,8 @@
             <div class="price">$0</div>
             <div class="price-note">Forever</div>
             <ul class="features">
-              <li>5 files per migration</li>
-              <li>Yup to Zod only</li>
+              <li>10 files per migration</li>
+              <li>Yup + Joi to Zod</li>
               <li>1 device</li>
               <li>JSON reports</li>
               <li>Up to 5 custom rules</li>
@@ -371,6 +407,9 @@
               <li>Behavioral warnings</li>
               <li>Standard Schema advisor</li>
               <li>Enhanced .when() migration</li>
+              <li>Project doctor diagnostics</li>
+              <li>Unified diff export</li>
+              <li>Dry-run summary table</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
               <li class="disabled">Advanced analysis</li>
@@ -391,18 +430,19 @@
             <div class="price-note">One-time payment</div>
             <ul class="features">
               <li>Unlimited files</li>
-              <li>Yup, Joi, Zod v3-v4</li>
+              <li>+ Zod v3&#8594;v4 upgrade</li>
               <li>1 device</li>
               <li>HTML reports</li>
               <li>Git integration</li>
               <li>Advanced analysis</li>
               <li>Risk scoring + CSV export</li>
               <li>Form resolver migration</li>
-              <li>Complexity estimation</li>
+              <li>Complexity + duration estimation</li>
               <li>Bundle size estimation</li>
               <li>Performance analysis</li>
               <li>Type deduplication</li>
               <li>Migration presets</li>
+              <li>Schema compare command</li>
               <li class="disabled">CI/CD support</li>
               <li class="disabled">Cross-file resolution</li>
             </ul>
@@ -438,6 +478,10 @@
               <li>Dependency graph (DOT/Mermaid)</li>
               <li>Zod v4 behavioral test generator</li>
               <li>Cross-field validation helpers</li>
+              <li>Schema verification (contract testing)</li>
+              <li>Pre-commit hooks integration</li>
+              <li>Canary migration mode</li>
+              <li>GitLab CI + Azure DevOps templates</li>
               <li class="disabled">Custom plugins</li>
               <li class="disabled">Schema governance</li>
               <li class="disabled">Audit logging</li>
@@ -472,11 +516,13 @@
               <li>Unlimited devices</li>
               <li>Custom plugins</li>
               <li>Schema governance with auto-fix</li>
-              <li>--fail-on-warnings</li>
-              <li>--max-risk-score threshold</li>
-              <li>Audit logging</li>
-              <li>Webhook notifications</li>
+              <li>Policy-as-code management</li>
+              <li>--fail-on-warnings / --max-risk-score</li>
+              <li>Audit logging with export</li>
+              <li>Compliance reports (SOC2/HIPAA)</li>
+              <li>Webhook notifications (Slack/Teams)</li>
               <li>Approval workflows</li>
+              <li>Schema drift detection</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_vFMywDBsSyYygwrlthhL6uZeeKptrsKf2L5wi108Qxs"
@@ -511,7 +557,7 @@
             </tr>
             <tr>
               <td>Joi → Zod</td>
-              <td class="cross">—</td>
+              <td class="check">✓</td>
               <td class="check">✓</td>
               <td class="check">✓</td>
               <td class="check">✓</td>
@@ -668,9 +714,9 @@
           <div class="card">
             <h3 style="margin-bottom: 0.75rem">CI/CD Integration</h3>
             <p style="color: var(--muted); font-size: 0.9rem">
-              SARIF output for GitHub Code Scanning, JUnit for test reporting,
-              reusable GitHub Action, and enhanced audit logging with JSON/CSV
-              export for enterprise pipelines.
+              SARIF output for GitHub Code Scanning, JUnit for test reporting.
+              Templates for GitHub Actions, GitLab CI, and Azure DevOps.
+              Enhanced audit logging with JSON/CSV export.
             </p>
           </div>
           <div class="card">
@@ -679,6 +725,22 @@
               Built-in rule templates: no-any-schemas, require-descriptions,
               max-nesting-depth, naming-convention, and more. Enforce schema
               quality standards out of the box.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Contract Testing</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Verify migrated schemas produce the same validation results as
+              originals. Generates test samples, runs against both libraries,
+              and reports parity scores.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Compliance &amp; Audit</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              SOC2 and HIPAA compliance reports. Policy-as-code governance.
+              Approval workflows with reviewer tracking. Full audit trail
+              for regulated environments.
             </p>
           </div>
         </div>

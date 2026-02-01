@@ -256,9 +256,14 @@
           <a href="#license">license</a>
           <a href="#pricing-cmd">pricing</a>
           <a href="#init">init</a>
+          <a href="#doctor">doctor</a>
+          <a href="#verify">verify</a>
+          <a href="#compare">compare</a>
           <a href="#graph">graph</a>
           <a href="#presets">presets</a>
           <a href="#approvals">approvals</a>
+          <a href="#hooks">hooks</a>
+          <a href="#policy">policy</a>
 
           <div class="sidebar-section">Migrations</div>
           <a href="#yup-to-zod">Yup → Zod</a>
@@ -307,6 +312,13 @@
           <a href="#behavioral-test-gen">Zod v4 Behavioral Tests</a>
           <a href="#incremental-migration">Incremental Migration</a>
           <a href="#package-updates">Package Updates</a>
+          <a href="#schema-verification">Schema Verification</a>
+          <a href="#canary-migration">Canary Migration</a>
+          <a href="#duration-estimation">Duration Estimation</a>
+          <a href="#compliance-reports">Compliance Reports</a>
+          <a href="#ci-templates">CI/CD Templates</a>
+          <a href="#hooks-integration">Pre-Commit Hooks</a>
+          <a href="#policy-as-code">Policy-as-Code</a>
 
           <div class="sidebar-section">Licensing</div>
           <a href="#tiers">Tiers & Features</a>
@@ -557,6 +569,27 @@ Schemas by library:
               <td>
                 Use a migration preset
                 <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--output-diff &lt;file&gt;</code></td>
+              <td>
+                Export unified diff to file (use <code>-</code> for stdout)
+                <span class="badge">Free</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--canary &lt;percent&gt;</code></td>
+              <td>
+                Migrate only N% of files, simplest first
+                <span class="badge">Pro+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--compliance-report &lt;format&gt;</code></td>
+              <td>
+                Generate compliance report (soc2, hipaa)
+                <span class="badge">Team</span>
               </td>
             </tr>
           </tbody>
@@ -967,6 +1000,168 @@ Schemas by library:
           </p>
         </div>
 
+        <!-- NEW COMMANDS -->
+        <h2 id="doctor">doctor</h2>
+        <p>
+          Diagnose project health and suggest migrations.
+          <span class="badge">Free</span>
+        </p>
+        <pre><code><span class="cmd">schemashift doctor</span> [path] [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output as JSON</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>The doctor command performs several health checks:</p>
+        <ul>
+          <li><strong>Schema library detection</strong> &mdash; identifies Zod, Yup, Joi, Valibot, io-ts, and their versions from <code>package.json</code></li>
+          <li><strong>Outdated version detection</strong> &mdash; flags Zod v3 when v4 is available, suggests Yup/Joi&rarr;Zod migration</li>
+          <li><strong>Form library compatibility</strong> &mdash; detects react-hook-form + yup and suggests resolver migration</li>
+          <li><strong>Ecosystem dependency checks</strong> &mdash; identifies drizzle-zod, tRPC, and other packages that may need updating</li>
+          <li><strong>Config validation</strong> &mdash; checks <code>.schemashiftrc.json</code> for issues</li>
+          <li><strong>Actionable suggestions</strong> &mdash; provides runnable SchemaShift commands based on detected state</li>
+        </ul>
+
+        <p>Example output:</p>
+        <pre><code><span class="cmd">schemashift doctor</span>
+
+<span style="color: var(--green)">✓</span> package.json found
+<span style="color: var(--yellow)">!</span> Zod v3.22.0 detected &mdash; v4 available
+<span style="color: var(--green)">✓</span> No form library issues
+<span style="color: var(--accent)">i</span> Suggestion: schemashift migrate . -f zod-v3 -t v4</code></pre>
+
+        <h2 id="verify">verify</h2>
+        <p>
+          Contract testing &mdash; verify migrated schemas match originals.
+          <span class="badge">Pro+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift verify</span> &lt;path&gt; <span class="flag">-f</span> &lt;library&gt; <span class="flag">-t</span> &lt;library&gt; [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>-f, --from</code></td>
+              <td>Source schema library</td>
+            </tr>
+            <tr>
+              <td><code>-t, --to</code></td>
+              <td>Target schema library</td>
+            </tr>
+            <tr>
+              <td><code>--samples &lt;count&gt;</code></td>
+              <td>Number of test samples to generate (default: 50)</td>
+            </tr>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output as JSON</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>The verify command:</p>
+        <ol>
+          <li>Extracts schema names from source files (supports Zod, Yup, Joi, Valibot patterns)</li>
+          <li>Generates test samples (valid + invalid boundary data) based on schema structure</li>
+          <li>Validates samples through both source and target schemas</li>
+          <li>Reports parity score with detailed mismatch information</li>
+        </ol>
+
+        <pre><code><span class="cmd">schemashift verify</span> ./src <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--samples</span> 100</code></pre>
+
+        <h2 id="compare">compare</h2>
+        <p>
+          Side-by-side schema comparison showing how source maps to target.
+          <span class="badge">Individual+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift compare</span> &lt;path&gt; <span class="flag">-f</span> &lt;library&gt; <span class="flag">-t</span> &lt;library&gt; [<span class="flag">--json</span>]</code></pre>
+
+        <h2 id="hooks">hooks</h2>
+        <p>
+          Manage pre-commit hook integration for governance checks.
+          <span class="badge">Pro+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift hooks</span> &lt;install|uninstall|status&gt;</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Subcommand</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>install</code></td>
+              <td>Detect husky/lint-staged and add governance check hook</td>
+            </tr>
+            <tr>
+              <td><code>uninstall</code></td>
+              <td>Remove SchemaShift git hooks</td>
+            </tr>
+            <tr>
+              <td><code>status</code></td>
+              <td>Show current hook configuration</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2 id="policy">policy</h2>
+        <p>
+          Policy-as-code management for schema governance.
+          <span class="badge">Team</span>
+        </p>
+        <pre><code><span class="cmd">schemashift policy</span> &lt;init|check|list&gt; [path]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Subcommand</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>init</code></td>
+              <td>Generate a policy file from governance templates</td>
+            </tr>
+            <tr>
+              <td><code>check &lt;path&gt;</code></td>
+              <td>Run governance checks with active policies</td>
+            </tr>
+            <tr>
+              <td><code>list</code></td>
+              <td>Show available governance templates with categories</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># Initialize policies from templates</span>
+<span class="cmd">schemashift policy</span> init
+
+<span class="comment"># Check project against policies</span>
+<span class="cmd">schemashift policy</span> check ./src
+
+<span class="comment"># List available governance templates</span>
+<span class="cmd">schemashift policy</span> list</code></pre>
+
         <!-- MIGRATIONS -->
         <h2 id="yup-to-zod">Yup → Zod</h2>
         <p><strong>Available in: Free, Individual, Pro, Team</strong></p>
@@ -1071,7 +1266,7 @@ const userSchema = z.object({
         </div>
 
         <h2 id="joi-to-zod">Joi → Zod</h2>
-        <p><strong>Available in: Individual, Pro, Team</strong></p>
+        <p><strong>Available in: Free, Individual, Pro, Team</strong></p>
 
         <pre><code><span class="comment">// Before (Joi)</span>
 import Joi from <span class="string">'joi'</span>;
@@ -2200,6 +2395,29 @@ jobs:
           <li><code>drift_detected</code> — fired when schema drift is detected</li>
         </ul>
 
+        <h3>Webhook Type Formatting</h3>
+        <p>
+          Add a <code>type</code> field to automatically format payloads for specific platforms:
+        </p>
+        <pre><code>{
+  <span class="string">"webhooks"</span>: [
+    {
+      <span class="string">"url"</span>: <span class="string">"https://hooks.slack.com/services/T00/B00/xxxx"</span>,
+      <span class="string">"type"</span>: <span class="string">"slack"</span>,
+      <span class="string">"events"</span>: [<span class="string">"migration_completed"</span>]
+    },
+    {
+      <span class="string">"url"</span>: <span class="string">"https://outlook.office.com/webhook/..."</span>,
+      <span class="string">"type"</span>: <span class="string">"teams"</span>
+    }
+  ]
+}</code></pre>
+        <ul>
+          <li><code>"slack"</code> &mdash; sends Slack Block Kit format (header + section with fields + context)</li>
+          <li><code>"teams"</code> &mdash; sends Microsoft Teams Adaptive Card format (TextBlock + FactSet)</li>
+          <li><code>"generic"</code> (default) &mdash; sends raw event JSON payload</li>
+        </ul>
+
         <p>
           Webhooks are signed with HMAC-SHA256 via the <code>X-SchemaShift-Signature</code> header
           when a <code>secret</code> is configured. Compatible with Slack, Microsoft Teams, Zapier,
@@ -2334,6 +2552,167 @@ jobs:
           </p>
         </div>
 
+        <!-- NEW ADVANCED FEATURES -->
+        <h2 id="schema-verification">Schema Verification (Contract Testing)</h2>
+        <p><span class="badge">Pro+</span></p>
+        <p>
+          The <code>schemashift verify</code> command provides contract testing for migrated schemas,
+          ensuring that target schemas produce the same validation behavior as source schemas.
+        </p>
+        <ul>
+          <li><strong>Schema extraction</strong> &mdash; identifies schema definitions from source code (Zod, Yup, Joi, Valibot patterns and exports)</li>
+          <li><strong>Sample generation</strong> &mdash; creates valid and invalid test data based on detected schema patterns (string, number, boolean, email, url, uuid, optional, nullable)</li>
+          <li><strong>Parity scoring</strong> &mdash; compares pass/fail results between source and target, reporting an overall parity score</li>
+          <li><strong>Mismatch reporting</strong> &mdash; details which samples produced different results and why</li>
+        </ul>
+        <pre><code><span class="cmd">schemashift verify</span> ./src <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--samples</span> 100</code></pre>
+
+        <h2 id="canary-migration">Canary Migration</h2>
+        <p><span class="badge">Pro+</span></p>
+        <p>
+          Canary migration lets you migrate a percentage of files first, verify the results, then
+          continue with the rest. This is especially useful for large codebases where you want to
+          validate the migration approach before committing fully.
+        </p>
+        <pre><code><span class="comment"># Migrate 20% of files (simplest first)</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--canary</span> 20
+
+<span class="comment"># Verify, then continue with remaining files</span>
+<span class="cmd">schemashift migrate</span> ./src <span class="flag">-f</span> yup <span class="flag">-t</span> zod</code></pre>
+        <p>
+          Files are selected by size (smallest/simplest first) using the <code>IncrementalTracker</code>.
+          State is persisted so you can resume at any point.
+        </p>
+
+        <h2 id="duration-estimation">Duration Estimation</h2>
+        <p><span class="badge">Individual+</span></p>
+        <p>
+          The complexity estimator now includes duration estimation, providing time range estimates
+          based on the migration's effort level and file count:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Effort Level</th>
+              <th>Base Range</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Trivial</td>
+              <td>1&ndash;5 minutes</td>
+              <td>Few simple schemas, no advanced patterns</td>
+            </tr>
+            <tr>
+              <td>Low</td>
+              <td>5&ndash;15 minutes</td>
+              <td>Moderate schema count, basic patterns</td>
+            </tr>
+            <tr>
+              <td>Moderate</td>
+              <td>15&ndash;45 minutes</td>
+              <td>Many schemas or some advanced patterns</td>
+            </tr>
+            <tr>
+              <td>High</td>
+              <td>1&ndash;3 hours</td>
+              <td>Large codebase with complex patterns</td>
+            </tr>
+            <tr>
+              <td>Extreme</td>
+              <td>3&ndash;8 hours</td>
+              <td>Very large codebase with many advanced patterns</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Ranges scale with file count using a logarithmic factor. Duration is shown during migration
+          when the tier allows complexity estimation.
+        </p>
+
+        <h2 id="compliance-reports">Compliance Reports</h2>
+        <p><span class="badge">Team</span></p>
+        <p>
+          Generate compliance-ready reports from migration audit logs for regulated environments.
+          Use the <code>--compliance-report</code> flag during migration:
+        </p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--audit</span> <span class="flag">--compliance-report</span> soc2</code></pre>
+
+        <h3>SOC2 Format</h3>
+        <ul>
+          <li><strong>Change Control Summary</strong> &mdash; total entries, success rate, date range</li>
+          <li><strong>Entry Details</strong> &mdash; change control IDs, timestamps, risk scores, warnings</li>
+          <li><strong>Rollback Procedure</strong> &mdash; backup verification and restore commands</li>
+        </ul>
+
+        <h3>HIPAA Format</h3>
+        <ul>
+          <li><strong>Data Transformation Summary</strong> &mdash; total entries, success rate, date range</li>
+          <li><strong>Integrity Verification</strong> &mdash; SHA-256 content hashes for each transformation</li>
+          <li><strong>Access Control</strong> &mdash; hostname, user, CI provider, job ID for each operation</li>
+        </ul>
+
+        <h2 id="ci-templates">CI/CD Templates</h2>
+        <p><span class="badge">Pro+</span></p>
+        <p>
+          Ready-to-use CI/CD pipeline templates are provided for multiple platforms,
+          complementing the existing GitHub Action:
+        </p>
+
+        <h3>GitLab CI</h3>
+        <p>Template at <code>templates/gitlab-ci.yml</code> includes:</p>
+        <ul>
+          <li><code>schemashift-migrate</code> job with JUnit report artifacts</li>
+          <li><code>schemashift-analyze</code> job with JSON output</li>
+          <li><code>schemashift-governance</code> job for Team tier</li>
+        </ul>
+        <pre><code><span class="comment"># Include in your .gitlab-ci.yml</span>
+include:
+  - local: templates/gitlab-ci.yml</code></pre>
+
+        <h3>Azure DevOps</h3>
+        <p>Template at <code>templates/azure-pipelines.yml</code> includes:</p>
+        <ul>
+          <li>Analyze job with build artifact publishing</li>
+          <li>Migrate job with JUnit test results integration</li>
+        </ul>
+
+        <h2 id="hooks-integration">Pre-Commit Hooks</h2>
+        <p><span class="badge">Pro+</span></p>
+        <p>
+          Integrate governance checks into your git workflow. The hooks command
+          automatically detects husky and lint-staged:
+        </p>
+        <pre><code><span class="comment"># Install hooks (auto-detects husky/lint-staged)</span>
+<span class="cmd">schemashift hooks</span> install
+
+<span class="comment"># Check hook status</span>
+<span class="cmd">schemashift hooks</span> status
+
+<span class="comment"># Remove hooks</span>
+<span class="cmd">schemashift hooks</span> uninstall</code></pre>
+        <p>
+          Once installed, governance checks run automatically on pre-commit,
+          catching schema violations before they reach your repository.
+        </p>
+
+        <h2 id="policy-as-code">Policy-as-Code</h2>
+        <p><span class="badge">Team</span></p>
+        <p>
+          The policy command provides structured management of schema governance
+          policies for your organization:
+        </p>
+        <ul>
+          <li><code>schemashift policy init</code> &mdash; generates a policy file from built-in governance templates</li>
+          <li><code>schemashift policy check &lt;path&gt;</code> &mdash; runs governance checks with active policies</li>
+          <li><code>schemashift policy list</code> &mdash; shows available governance templates grouped by category</li>
+        </ul>
+        <p>
+          Policies build on top of the existing governance engine, providing a more
+          structured workflow for enforcing schema standards across teams.
+        </p>
+
         <!-- LICENSING -->
         <h2 id="tiers">Tiers & Features</h2>
 
@@ -2353,7 +2732,7 @@ jobs:
             </tr>
             <tr>
               <td>Files per migration</td>
-              <td>5</td>
+              <td>10</td>
               <td>Unlimited</td>
               <td>Unlimited</td>
               <td>Unlimited</td>
@@ -2367,7 +2746,7 @@ jobs:
             </tr>
             <tr>
               <td>Joi → Zod</td>
-              <td>—</td>
+              <td>✓</td>
               <td>✓</td>
               <td>✓</td>
               <td>✓</td>
@@ -2643,6 +3022,93 @@ jobs:
               <td>—</td>
               <td>✓</td>
             </tr>
+            <tr>
+              <td colspan="5" style="font-weight: 600; color: var(--accent); padding-top: 1.25rem;">New Features</td>
+            </tr>
+            <tr>
+              <td>Doctor command</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Unified diff export</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Dry-run summary table</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Duration estimation</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Compare command</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Schema verification</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Canary migration</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Pre-commit hooks</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>GitLab CI / Azure DevOps templates</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Policy-as-code</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Compliance reports (SOC2/HIPAA)</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Slack/Teams webhook formatting</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
           </tbody>
         </table>
 
@@ -2697,19 +3163,37 @@ jobs:
         run: schemashift migrate ./src --from yup --to zod --dry-run --ci</code></pre>
 
         <h3>GitLab CI</h3>
+        <p>A ready-to-use template is available at <code>templates/gitlab-ci.yml</code>. Minimal example:</p>
         <pre><code>schema-check:
   image: node:22
   script:
     - npm install -g schemashift-cli
     - schemashift migrate ./src --from yup --to zod --dry-run --ci
   variables:
-    SCHEMASHIFT_LICENSE_KEY: $SCHEMASHIFT_LICENSE_KEY</code></pre>
+    SCHEMASHIFT_LICENSE_KEY: $SCHEMASHIFT_LICENSE_KEY
+  artifacts:
+    reports:
+      junit: migration-report.xml</code></pre>
+
+        <h3>Azure DevOps</h3>
+        <p>A ready-to-use template is available at <code>templates/azure-pipelines.yml</code>. Minimal example:</p>
+        <pre><code>steps:
+  - script: |
+      npm install -g schemashift-cli
+      schemashift migrate ./src --from yup --to zod --ci \
+        --report junit --report-output $(Build.ArtifactStagingDirectory)/results.xml
+    env:
+      SCHEMASHIFT_LICENSE_KEY: $(SCHEMASHIFT_LICENSE_KEY)
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: '$(Build.ArtifactStagingDirectory)/results.xml'</code></pre>
 
         <div class="callout callout-info">
           <div class="callout-title">Tip</div>
           <p>
             The <code>--ci</code> flag exits with code 1 if any migration fails,
-            making it suitable for CI pipelines.
+            making it suitable for CI pipelines. Use <code>--output-diff -</code>
+            to include unified diff output in your CI logs.
           </p>
         </div>
 
@@ -2727,8 +3211,9 @@ jobs:
 
         <h3>"Migration requires higher tier"</h3>
         <p>
-          Some migration paths (Joi, io-ts) require paid tiers. Run
+          Some migration paths (io-ts, Zod↔Valibot, ArkType, Superstruct, Effect Schema) require paid tiers. Run
           <code>schemashift pricing</code> to see what's included in each tier.
+          Yup→Zod and Joi→Zod are available in the Free tier.
         </p>
 
         <h3>"No handler for migration"</h3>
