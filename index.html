@@ -6,7 +6,7 @@
     <title>SchemaShift - TypeScript Schema Migration CLI</title>
     <meta
       name="description"
-      content="Convert schemas between Zod, Yup, Joi, io-ts, and Valibot with AST-based transformations."
+      content="Convert schemas between Zod, Yup, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema with AST-based transformations."
     />
     <style>
       :root {
@@ -244,7 +244,7 @@
         <div class="logo">Schema<span>Shift</span></div>
         <p class="tagline">
           TypeScript schema migration CLI. Convert between Zod, Yup, Joi, io-ts,
-          and Valibot with AST-based transformations.
+          Valibot, ArkType, Superstruct, and Effect Schema with AST-based transformations.
         </p>
         <code class="install-cmd">npm install -g schemashift-cli</code>
       </header>
@@ -320,6 +320,34 @@
             <h3>Backward Migrations</h3>
             <p>Migrate back from Zod to Yup or from Valibot to Zod. Full bidirectional support for when requirements change.</p>
           </div>
+          <div class="card">
+            <h3>Dependency Graph Visualization</h3>
+            <p>Export schema dependency graphs in DOT (Graphviz) or Mermaid format. Color-code by library, highlight circular dependencies, and filter by schema type.</p>
+          </div>
+          <div class="card">
+            <h3>Migration Presets</h3>
+            <p>Built-in templates for common scenarios: React Hook Form + Yup&#8594;Zod, tRPC Zod v3&#8594;v4, Express Joi&#8594;Zod, Next.js forms, and monorepo staged migrations.</p>
+          </div>
+          <div class="card">
+            <h3>Enhanced .when() Migration</h3>
+            <p>Smart Yup <code>.when()</code> analysis generates the right Zod replacement: <code>z.discriminatedUnion()</code>, <code>z.union()</code>, or <code>.superRefine()</code> based on the condition pattern.</p>
+          </div>
+          <div class="card">
+            <h3>Standard Schema Advisor</h3>
+            <p>Detects when both source and target support Standard Schema 1.0. Recommends adapter approach vs full migration with pros, cons, and generated wrapper code.</p>
+          </div>
+          <div class="card">
+            <h3>Approval Workflows</h3>
+            <p>Review gates for shared codebases. Create migration requests, assign reviewers, approve or reject before executing. File-based persistence for auditability.</p>
+          </div>
+          <div class="card">
+            <h3>Webhook Notifications</h3>
+            <p>Send migration events (started, completed, failed, governance violations, drift detected) to Slack, Teams, Zapier, or any HTTP endpoint with HMAC-SHA256 signing.</p>
+          </div>
+          <div class="card">
+            <h3>Cross-Field Validation Helpers</h3>
+            <p>Reusable <code>.superRefine()</code> patterns for common cross-field logic: <code>requireIf</code>, <code>requireOneOf</code>, <code>mutuallyExclusive</code>, and <code>dependentFields</code>.</p>
+          </div>
         </div>
       </section>
 
@@ -341,6 +369,8 @@
               <li>Up to 5 custom rules</li>
               <li>TODO resolution summary</li>
               <li>Behavioral warnings</li>
+              <li>Standard Schema advisor</li>
+              <li>Enhanced .when() migration</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
               <li class="disabled">Advanced analysis</li>
@@ -372,6 +402,7 @@
               <li>Bundle size estimation</li>
               <li>Performance analysis</li>
               <li>Type deduplication</li>
+              <li>Migration presets</li>
               <li class="disabled">CI/CD support</li>
               <li class="disabled">Cross-file resolution</li>
             </ul>
@@ -402,8 +433,11 @@
               <li>Chain migrations</li>
               <li>Compatibility analyzer</li>
               <li>Monorepo-aware migration</li>
-              <li>Ecosystem upgrade commands</li>
+              <li>Ecosystem upgrade commands (30+ packages)</li>
               <li>Test scaffolding</li>
+              <li>Dependency graph (DOT/Mermaid)</li>
+              <li>Zod v4 behavioral test generator</li>
+              <li>Cross-field validation helpers</li>
               <li class="disabled">Custom plugins</li>
               <li class="disabled">Schema governance</li>
               <li class="disabled">Audit logging</li>
@@ -437,10 +471,12 @@
               <li>Everything in Pro</li>
               <li>Unlimited devices</li>
               <li>Custom plugins</li>
-              <li>Schema governance</li>
+              <li>Schema governance with auto-fix</li>
               <li>--fail-on-warnings</li>
               <li>--max-risk-score threshold</li>
               <li>Audit logging</li>
+              <li>Webhook notifications</li>
+              <li>Approval workflows</li>
             </ul>
             <a
               href="https://buy.polar.sh/polar_cl_vFMywDBsSyYygwrlthhL6uZeeKptrsKf2L5wi108Qxs"
@@ -510,6 +546,27 @@
             </tr>
             <tr>
               <td>Valibot → Zod</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Zod ↔ ArkType</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>Zod ↔ Superstruct</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">✓</td>
+              <td class="check">✓</td>
+            </tr>
+            <tr>
+              <td>io-ts → Effect Schema</td>
               <td class="cross">—</td>
               <td class="cross">—</td>
               <td class="check">✓</td>
@@ -598,6 +655,30 @@
             <p style="color: var(--muted); font-size: 0.9rem">
               Workspace detection with topological ordering. Migrates packages
               in dependency order to prevent breakage across your monorepo.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Schema Drift Detection</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Snapshot-based comparison detects when schemas diverge from
+              baseline. Track added, removed, and modified schemas over time
+              for compliance and audit.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">CI/CD Integration</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              SARIF output for GitHub Code Scanning, JUnit for test reporting,
+              reusable GitHub Action, and enhanced audit logging with JSON/CSV
+              export for enterprise pipelines.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom: 0.75rem">Governance Templates</h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Built-in rule templates: no-any-schemas, require-descriptions,
+              max-nesting-depth, naming-convention, and more. Enforce schema
+              quality standards out of the box.
             </p>
           </div>
         </div>

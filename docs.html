@@ -256,6 +256,9 @@
           <a href="#license">license</a>
           <a href="#pricing-cmd">pricing</a>
           <a href="#init">init</a>
+          <a href="#graph">graph</a>
+          <a href="#presets">presets</a>
+          <a href="#approvals">approvals</a>
 
           <div class="sidebar-section">Migrations</div>
           <a href="#yup-to-zod">Yup → Zod</a>
@@ -265,6 +268,9 @@
           <a href="#zod-valibot">Zod ↔ Valibot</a>
           <a href="#zod-to-yup">Zod → Yup</a>
           <a href="#valibot-to-zod">Valibot → Zod</a>
+          <a href="#zod-arktype">Zod ↔ ArkType</a>
+          <a href="#zod-superstruct">Zod ↔ Superstruct</a>
+          <a href="#io-ts-effect">io-ts → Effect Schema</a>
           <a href="#type-helpers">Type Helpers</a>
           <a href="#form-libraries">Form Libraries</a>
 
@@ -291,6 +297,14 @@
           <a href="#type-deduplication">Type Deduplication</a>
           <a href="#test-scaffolding">Test Scaffolding</a>
           <a href="#audit-logging">Audit Logging</a>
+          <a href="#drift-detection">Schema Drift Detection</a>
+          <a href="#governance-templates">Governance Templates</a>
+          <a href="#ci-reporting">CI Reporting (SARIF/JUnit)</a>
+          <a href="#github-action">GitHub Action</a>
+          <a href="#webhook-notifications">Webhook Notifications</a>
+          <a href="#cross-field-patterns">Cross-Field Patterns</a>
+          <a href="#when-migration">Enhanced .when() Migration</a>
+          <a href="#behavioral-test-gen">Zod v4 Behavioral Tests</a>
           <a href="#incremental-migration">Incremental Migration</a>
           <a href="#package-updates">Package Updates</a>
 
@@ -538,6 +552,13 @@ Schemas by library:
                 <span class="badge">Team</span>
               </td>
             </tr>
+            <tr>
+              <td><code>--preset &lt;name&gt;</code></td>
+              <td>
+                Use a migration preset
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -709,7 +730,35 @@ Schemas by library:
           Run schema governance checks against configurable rules.
           <span class="badge">Team</span>
         </p>
-        <pre><code><span class="cmd">schemashift governance</span> &lt;path&gt; [-c config] [--json]</code></pre>
+        <pre><code><span class="cmd">schemashift governance</span> &lt;path&gt; [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output results as JSON</td>
+            </tr>
+            <tr>
+              <td><code>--fix</code></td>
+              <td>Auto-fix fixable violations (no-any-schemas, require-descriptions, require-max-length, naming-convention)</td>
+            </tr>
+            <tr>
+              <td><code>--fix-dry-run</code></td>
+              <td>Preview auto-fixes without applying changes</td>
+            </tr>
+            <tr>
+              <td><code>-c, --config</code></td>
+              <td>Path to config file</td>
+            </tr>
+          </tbody>
+        </table>
+
         <p>
           Enforces naming conventions, complexity limits, required validations,
           and more. See
@@ -718,8 +767,205 @@ Schemas by library:
         <pre><code><span class="comment"># Run governance checks</span>
 <span class="cmd">schemashift governance</span> ./src
 
+<span class="comment"># Auto-fix violations</span>
+<span class="cmd">schemashift governance</span> ./src <span class="flag">--fix</span>
+
+<span class="comment"># Preview auto-fixes without applying</span>
+<span class="cmd">schemashift governance</span> ./src <span class="flag">--fix-dry-run</span>
+
 <span class="comment"># With custom config</span>
 <span class="cmd">schemashift governance</span> ./src <span class="flag">-c</span> .schemashiftrc.json</code></pre>
+
+        <!-- GRAPH -->
+        <h2 id="graph">graph</h2>
+        <p>
+          Export schema dependency graph in DOT or Mermaid format.
+          <span class="badge">Pro+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift graph</span> &lt;path&gt; [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--format &lt;dot|mermaid&gt;</code></td>
+              <td>Output format (default: mermaid)</td>
+            </tr>
+            <tr>
+              <td><code>--output &lt;file&gt;</code></td>
+              <td>Write to file instead of stdout</td>
+            </tr>
+            <tr>
+              <td><code>--filter &lt;library&gt;</code></td>
+              <td>Show only schemas from a specific library</td>
+            </tr>
+            <tr>
+              <td><code>--highlight-circular</code></td>
+              <td>Highlight circular dependencies</td>
+            </tr>
+            <tr>
+              <td><code>--color</code></td>
+              <td>Color-code nodes by library</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># Export Mermaid diagram to stdout</span>
+<span class="cmd">schemashift graph</span> ./src
+
+<span class="comment"># Export DOT format to file</span>
+<span class="cmd">schemashift graph</span> ./src <span class="flag">--format</span> dot <span class="flag">--output</span> schema-deps.dot
+
+<span class="comment"># Highlight circular dependencies with colors</span>
+<span class="cmd">schemashift graph</span> ./src <span class="flag">--highlight-circular</span> <span class="flag">--color</span></code></pre>
+
+        <!-- PRESETS -->
+        <h2 id="presets">presets</h2>
+        <p>
+          List available migration presets for common scenarios.
+          <span class="badge">Individual+</span>
+        </p>
+        <pre><code><span class="cmd">schemashift presets</span> [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output as JSON</td>
+            </tr>
+            <tr>
+              <td><code>--category &lt;cat&gt;</code></td>
+              <td>Filter by category</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Built-in Presets</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Preset</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>react-hook-form-yup-to-zod</code></td>
+              <td>React Hook Form project migrating from Yup to Zod, including resolver updates</td>
+            </tr>
+            <tr>
+              <td><code>trpc-zod-v3-to-v4</code></td>
+              <td>tRPC project upgrading Zod from v3 to v4</td>
+            </tr>
+            <tr>
+              <td><code>express-joi-to-zod</code></td>
+              <td>Express.js project migrating Joi validation to Zod</td>
+            </tr>
+            <tr>
+              <td><code>nextjs-form-migration</code></td>
+              <td>Next.js form validation migration</td>
+            </tr>
+            <tr>
+              <td><code>monorepo-staged-migration</code></td>
+              <td>Phased monorepo migration with topological ordering</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Use a preset with the migrate command:</p>
+        <pre><code><span class="cmd">schemashift migrate</span> ./src <span class="flag">--preset</span> react-hook-form-yup-to-zod</code></pre>
+
+        <!-- APPROVALS -->
+        <h2 id="approvals">approvals</h2>
+        <p>
+          Manage migration approval workflows for shared codebases.
+          <span class="badge">Team</span>
+        </p>
+        <pre><code><span class="cmd">schemashift approvals</span> [path] [options]</code></pre>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Option</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--create</code></td>
+              <td>Create a new migration request</td>
+            </tr>
+            <tr>
+              <td><code>--approve &lt;id&gt;</code></td>
+              <td>Approve a pending request</td>
+            </tr>
+            <tr>
+              <td><code>--reject &lt;id&gt;</code></td>
+              <td>Reject a pending request</td>
+            </tr>
+            <tr>
+              <td><code>--list</code></td>
+              <td>List all requests</td>
+            </tr>
+            <tr>
+              <td><code>--status &lt;status&gt;</code></td>
+              <td>Filter by status (pending, approved, rejected)</td>
+            </tr>
+            <tr>
+              <td><code>-f, --from</code></td>
+              <td>Source library (for --create)</td>
+            </tr>
+            <tr>
+              <td><code>-t, --to</code></td>
+              <td>Target library (for --create)</td>
+            </tr>
+            <tr>
+              <td><code>--reviewer &lt;name&gt;</code></td>
+              <td>Reviewer name</td>
+            </tr>
+            <tr>
+              <td><code>--reason &lt;reason&gt;</code></td>
+              <td>Decision reason</td>
+            </tr>
+            <tr>
+              <td><code>--json</code></td>
+              <td>Output as JSON</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>Examples:</p>
+        <pre><code><span class="comment"># Create a migration request</span>
+<span class="cmd">schemashift approvals</span> ./src <span class="flag">--create</span> <span class="flag">--from</span> yup <span class="flag">--to</span> zod
+
+<span class="comment"># List pending requests</span>
+<span class="cmd">schemashift approvals</span> <span class="flag">--list</span> <span class="flag">--status</span> pending
+
+<span class="comment"># Approve a request</span>
+<span class="cmd">schemashift approvals</span> <span class="flag">--approve</span> req-1706123456 <span class="flag">--reviewer</span> "Jane" <span class="flag">--reason</span> "LGTM"
+
+<span class="comment"># Reject a request</span>
+<span class="cmd">schemashift approvals</span> <span class="flag">--reject</span> req-1706123456 <span class="flag">--reviewer</span> "Jane" <span class="flag">--reason</span> "Needs tests first"</code></pre>
+
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            Approval requests are stored in <code>.schemashift/pending/</code> as JSON files.
+            Integrate with code review workflows by committing these files to your repository.
+          </p>
+        </div>
 
         <!-- MIGRATIONS -->
         <h2 id="yup-to-zod">Yup → Zod</h2>
@@ -1173,6 +1419,63 @@ const productSchema = z.object({
   price: z.number().min(0),
   status: z.enum([<span class="string">'active'</span>, <span class="string">'archived'</span>]),
 });</code></pre>
+
+        <!-- ZOD ↔ ARKTYPE -->
+        <h2 id="zod-arktype">Zod ↔ ArkType</h2>
+        <p class="tier-badge">Pro+</p>
+        <p>Bidirectional migration between Zod and ArkType. ArkType uses a string-based syntax that is fundamentally different from Zod's fluent API.</p>
+        <table>
+          <thead>
+            <tr><th>Zod</th><th>ArkType</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>z.object({ name: z.string() })</code></td><td><code>type({ name: "string" })</code></td></tr>
+            <tr><td><code>z.string().email()</code></td><td><code>type("string.email")</code></td></tr>
+            <tr><td><code>z.number().integer()</code></td><td><code>type("integer")</code></td></tr>
+            <tr><td><code>z.union([z.string(), z.number()])</code></td><td><code>type("string | number")</code></td></tr>
+            <tr><td><code>z.array(z.string())</code></td><td><code>type("string[]")</code></td></tr>
+            <tr><td><code>z.infer&lt;typeof schema&gt;</code></td><td><code>Type&lt;typeof schema&gt;</code></td></tr>
+          </tbody>
+        </table>
+
+        <!-- ZOD ↔ SUPERSTRUCT -->
+        <h2 id="zod-superstruct">Zod ↔ Superstruct</h2>
+        <p class="tier-badge">Pro+</p>
+        <p>Bidirectional migration between Zod and Superstruct. Superstruct uses bare function calls without a namespace prefix.</p>
+        <table>
+          <thead>
+            <tr><th>Zod</th><th>Superstruct</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>z.object({ name: z.string() })</code></td><td><code>object({ name: string() })</code></td></tr>
+            <tr><td><code>z.string()</code></td><td><code>string()</code></td></tr>
+            <tr><td><code>z.number()</code></td><td><code>number()</code></td></tr>
+            <tr><td><code>z.enum(["a", "b"])</code></td><td><code>enums(["a", "b"])</code></td></tr>
+            <tr><td><code>z.string().optional()</code></td><td><code>optional(string())</code></td></tr>
+            <tr><td><code>z.number().int()</code></td><td><code>integer()</code></td></tr>
+            <tr><td><code>z.infer&lt;typeof schema&gt;</code></td><td><code>Infer&lt;typeof schema&gt;</code></td></tr>
+          </tbody>
+        </table>
+
+        <!-- IO-TS → EFFECT SCHEMA -->
+        <h2 id="io-ts-effect">io-ts → Effect Schema</h2>
+        <p class="tier-badge">Pro+</p>
+        <p>Migrate io-ts codecs to Effect Schema. This is the successor path for io-ts users since fp-ts merged into Effect.</p>
+        <table>
+          <thead>
+            <tr><th>io-ts</th><th>Effect Schema</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>t.string</code></td><td><code>S.String</code></td></tr>
+            <tr><td><code>t.number</code></td><td><code>S.Number</code></td></tr>
+            <tr><td><code>t.boolean</code></td><td><code>S.Boolean</code></td></tr>
+            <tr><td><code>t.type({ name: t.string })</code></td><td><code>S.Struct({ name: S.String })</code></td></tr>
+            <tr><td><code>t.array(t.string)</code></td><td><code>S.Array(S.String)</code></td></tr>
+            <tr><td><code>t.union([A, B])</code></td><td><code>S.Union(A, B)</code></td></tr>
+            <tr><td><code>t.TypeOf&lt;typeof schema&gt;</code></td><td><code>S.Schema.Type&lt;typeof schema&gt;</code></td></tr>
+          </tbody>
+        </table>
+        <p>fp-ts imports are automatically rewritten to Effect equivalents (e.g., <code>pipe</code> from <code>effect/Function</code>).</p>
 
         <!-- TYPE HELPER MIGRATION -->
         <h2 id="type-helpers">Type Helper Migration</h2>
@@ -1717,7 +2020,277 @@ const productSchema = z.object({
         <p>
           Logs each file transform with timestamps, success/failure status, and warning counts.
           The audit log is persisted to <code>.schemashift/audit-log.json</code> for enterprise
-          compliance and traceability.
+          compliance and traceability. Enhanced with metadata collection (git commit, branch, CI provider),
+          JSON/CSV export, and date range filtering.
+        </p>
+
+        <!-- DRIFT DETECTION -->
+        <h2 id="drift-detection">Schema Drift Detection</h2>
+        <p>
+          Detect when schemas diverge from a saved baseline
+          (<span class="badge">Team</span>):
+        </p>
+        <p>
+          The drift detector takes a snapshot of your schema state (file paths, content hashes, schema names)
+          and saves it to <code>.schemashift/schema-snapshot.json</code>. Later, compare the current state
+          against the snapshot to detect added, removed, and modified schema files.
+        </p>
+        <p>
+          Useful for compliance auditing, CI drift checks, and tracking schema evolution over time.
+        </p>
+
+        <!-- GOVERNANCE TEMPLATES -->
+        <h2 id="governance-templates">Governance Templates</h2>
+        <p>
+          Built-in governance rule templates for common policies
+          (<span class="badge">Team</span>):
+        </p>
+        <ul>
+          <li><strong>no-any-schemas</strong> — disallow <code>z.any()</code>, <code>yup.mixed()</code>, <code>Joi.any()</code></li>
+          <li><strong>require-descriptions</strong> — all schemas must have <code>.describe()</code></li>
+          <li><strong>max-nesting-depth</strong> — limit schema nesting depth (configurable threshold)</li>
+          <li><strong>no-deprecated-methods</strong> — flag <code>.deepPartial()</code>, <code>.strip()</code>, <code>.promise()</code></li>
+          <li><strong>naming-convention</strong> — enforce schema naming pattern (configurable regex)</li>
+          <li><strong>require-max-length</strong> — string schemas must include <code>.max()</code></li>
+        </ul>
+        <p>
+          Access templates programmatically via <code>getGovernanceTemplate(name)</code>, <code>getGovernanceTemplateNames()</code>,
+          and <code>getGovernanceTemplatesByCategory()</code>.
+        </p>
+
+        <!-- CI REPORTING -->
+        <h2 id="ci-reporting">CI Reporting (SARIF/JUnit)</h2>
+        <p>
+          Machine-readable output formats for CI/CD pipelines
+          (<span class="badge">Pro+</span>):
+        </p>
+        <p>
+          <strong>SARIF</strong> — Static Analysis Results Interchange Format for GitHub Code Scanning.
+          Categorizes warnings into manual-review, behavioral-change, deprecated-pattern, and ecosystem-compatibility.
+        </p>
+        <p>
+          <strong>JUnit</strong> — XML test report format for CI systems (Jenkins, GitLab CI, etc.).
+          Creates test suites per file with test cases per transform result.
+        </p>
+        <p>
+          <strong>Exit codes:</strong> 0 = success, 1 = failure, 2 = warnings (when <code>--fail-on-warnings</code> is enabled).
+        </p>
+        <p>
+          A reusable <strong>GitHub Action</strong> is also available at <code>.github/actions/schemashift/action.yml</code>
+          for easy CI/CD pipeline integration. See <a href="#github-action">GitHub Action</a> below.
+        </p>
+
+        <!-- GITHUB ACTION -->
+        <h2 id="github-action">GitHub Action</h2>
+        <p>
+          A reusable GitHub Action for CI/CD pipeline integration
+          (<span class="badge">Pro+</span>):
+        </p>
+        <pre><code><span class="comment"># .github/workflows/schema-migration.yml</span>
+name: Schema Migration
+on: [push]
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/schemashift
+        with:
+          command: migrate
+          path: ./src
+          from: yup
+          to: zod
+          license-key: ${{ secrets.SCHEMASHIFT_LICENSE_KEY }}
+          extra-args: <span class="string">"--ci --report json"</span></code></pre>
+
+        <h3>Action Inputs</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Input</th>
+              <th>Description</th>
+              <th>Default</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>command</code></td>
+              <td>CLI command to run (migrate, analyze, governance)</td>
+              <td>migrate</td>
+            </tr>
+            <tr>
+              <td><code>path</code></td>
+              <td>Path to scan</td>
+              <td>./src</td>
+            </tr>
+            <tr>
+              <td><code>from</code></td>
+              <td>Source library</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><code>to</code></td>
+              <td>Target library</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><code>license-key</code></td>
+              <td>SchemaShift license key</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><code>extra-args</code></td>
+              <td>Additional CLI flags</td>
+              <td>—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Action Outputs</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Output</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>exit-code</code></td>
+              <td>CLI exit code (0=success, 1=failure, 2=warnings)</td>
+            </tr>
+            <tr>
+              <td><code>report-path</code></td>
+              <td>Path to generated report file (if --report used)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- WEBHOOK NOTIFICATIONS -->
+        <h2 id="webhook-notifications">Webhook Notifications</h2>
+        <p>
+          Send migration event notifications to external services
+          (<span class="badge">Team</span>):
+        </p>
+        <p>
+          Configure webhooks in your <code>.schemashiftrc.json</code> to receive notifications
+          when migration events occur:
+        </p>
+        <pre><code>{
+  <span class="string">"webhooks"</span>: [
+    {
+      <span class="string">"url"</span>: <span class="string">"https://hooks.slack.com/services/T00/B00/xxxx"</span>,
+      <span class="string">"events"</span>: [<span class="string">"migration_completed"</span>, <span class="string">"migration_failed"</span>],
+      <span class="string">"secret"</span>: <span class="string">"your-hmac-secret"</span>
+    },
+    {
+      <span class="string">"url"</span>: <span class="string">"https://your-api.com/webhooks/schemashift"</span>,
+      <span class="string">"events"</span>: [<span class="string">"governance_violation"</span>, <span class="string">"drift_detected"</span>],
+      <span class="string">"headers"</span>: { <span class="string">"Authorization"</span>: <span class="string">"Bearer token"</span> }
+    }
+  ]
+}</code></pre>
+
+        <h3>Event Types</h3>
+        <ul>
+          <li><code>migration_started</code> — fired when a migration begins</li>
+          <li><code>migration_completed</code> — fired on successful migration</li>
+          <li><code>migration_failed</code> — fired when a migration fails</li>
+          <li><code>governance_violation</code> — fired when governance rules are violated</li>
+          <li><code>drift_detected</code> — fired when schema drift is detected</li>
+        </ul>
+
+        <p>
+          Webhooks are signed with HMAC-SHA256 via the <code>X-SchemaShift-Signature</code> header
+          when a <code>secret</code> is configured. Compatible with Slack, Microsoft Teams, Zapier,
+          or any HTTP endpoint.
+        </p>
+
+        <!-- CROSS-FIELD PATTERNS -->
+        <h2 id="cross-field-patterns">Cross-Field Validation Helpers</h2>
+        <p>
+          Reusable <code>.superRefine()</code> code generators for common cross-field validation patterns
+          (<span class="badge">Pro+</span>):
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Helper</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>requireIf(conditionField, requiredField)</code></td>
+              <td>Make a field required when another field has a value</td>
+            </tr>
+            <tr>
+              <td><code>requireOneOf(fields)</code></td>
+              <td>At least one of N fields must be provided</td>
+            </tr>
+            <tr>
+              <td><code>mutuallyExclusive(fields)</code></td>
+              <td>Only one of N fields can be present at a time</td>
+            </tr>
+            <tr>
+              <td><code>dependentFields(primary, dependents)</code></td>
+              <td>Dependent fields become required when the primary is set</td>
+            </tr>
+            <tr>
+              <td><code>conditionalValidation(condition, value, target, message)</code></td>
+              <td>Value-based conditional validation on a target field</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Use <code>suggestCrossFieldPattern(whenCode)</code> to analyze Yup <code>.when()</code>
+          patterns and get a recommended Zod equivalent.
+        </p>
+
+        <!-- ENHANCED .when() MIGRATION -->
+        <h2 id="when-migration">Enhanced .when() Migration</h2>
+        <p>
+          Smart Yup <code>.when()</code> analysis with generated Zod replacement code
+          (<span class="badge" style="background: var(--green)">Free</span>):
+        </p>
+        <p>
+          The <code>analyzeWhenPatterns()</code> function detects the type of <code>.when()</code>
+          condition and generates the appropriate Zod replacement:
+        </p>
+        <ul>
+          <li><strong>Boolean discriminator</strong> → <code>z.discriminatedUnion()</code></li>
+          <li><strong>Enum discriminator</strong> → <code>z.discriminatedUnion()</code></li>
+          <li><strong>Presence check</strong> → <code>z.union()</code> + <code>.superRefine()</code></li>
+          <li><strong>Simple either/or</strong> → <code>z.union()</code></li>
+          <li><strong>Complex condition</strong> → <code>.superRefine()</code> template</li>
+        </ul>
+        <p>
+          Instead of leaving a bare <code>// TODO: handle .when()</code>, SchemaShift generates
+          working Zod code tailored to the specific pattern detected in your Yup schema.
+        </p>
+
+        <!-- ZOD V4 BEHAVIORAL TEST GENERATOR -->
+        <h2 id="behavioral-test-gen">Zod v4 Behavioral Test Generator</h2>
+        <p>
+          Detect silent v4 behavioral changes and generate regression test files
+          (<span class="badge">Pro+</span>):
+        </p>
+        <p>
+          The behavioral test generator scans your Zod v3 code for 6 patterns where
+          v4 silently changes behavior, then generates Vitest test files documenting
+          the expected differences:
+        </p>
+        <ul>
+          <li><code>.default()</code> + <code>.optional()</code> — <code>.default()</code> always provides a value, making <code>.optional()</code> a no-op</li>
+          <li><code>instanceof Error</code> — <code>ZodError</code> no longer extends <code>Error</code></li>
+          <li><code>.transform()</code> after <code>.refine()</code> — transforms now run even when refinements fail</li>
+          <li><code>.catch()</code> + <code>.optional()</code> — <code>.catch()</code> catches all issues</li>
+          <li>Error message format changes</li>
+          <li><code>.flatten()</code> API changes</li>
+        </ul>
+        <p>
+          Tests are output to <code>.schemashift/behavioral-tests/</code> and can be run
+          with your existing test framework to verify v3 vs v4 behavior before committing.
         </p>
 
         <h2 id="incremental-migration">Incremental Migration</h2>
@@ -2168,6 +2741,9 @@ jobs:
           <li><code>zod</code> ↔ <code>valibot</code></li>
           <li><code>zod</code> → <code>yup</code></li>
           <li><code>valibot</code> → <code>zod</code></li>
+          <li><code>zod</code> ↔ <code>arktype</code></li>
+          <li><code>zod</code> ↔ <code>superstruct</code></li>
+          <li><code>io-ts</code> → <code>effect</code> (Effect Schema)</li>
         </ul>
 
         <h3>Transformation produces incorrect code</h3>
