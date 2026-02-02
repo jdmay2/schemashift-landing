@@ -384,6 +384,14 @@
             <h3>Duration Estimation</h3>
             <p>Get pre-migration time estimates based on complexity analysis. Ranges from minutes (trivial) to hours (extreme) based on schema count and advanced patterns.</p>
           </div>
+          <div class="card">
+            <h3>Dead Schema Detection</h3>
+            <p>Find schema definitions that are never referenced elsewhere in your codebase. Clean up unused code before or after migration to keep your project lean.</p>
+          </div>
+          <div class="card">
+            <h3>Import Deduplication</h3>
+            <p>Detects duplicate import declarations from the same module within files — a common side effect of migration. Suggests merged imports for cleaner code.</p>
+          </div>
         </div>
       </section>
 
@@ -410,6 +418,7 @@
               <li>Project doctor diagnostics</li>
               <li>Unified diff export</li>
               <li>Dry-run summary table</li>
+              <li>Import deduplication</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
               <li class="disabled">Advanced analysis</li>
@@ -443,6 +452,7 @@
               <li>Type deduplication</li>
               <li>Migration presets</li>
               <li>Schema compare command</li>
+              <li>Dead schema detection</li>
               <li class="disabled">CI/CD support</li>
               <li class="disabled">Cross-file resolution</li>
             </ul>

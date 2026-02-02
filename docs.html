@@ -300,6 +300,8 @@
           <a href="#bundle-estimation">Bundle Estimation</a>
           <a href="#performance-analysis">Performance Analysis</a>
           <a href="#type-deduplication">Type Deduplication</a>
+          <a href="#dead-schema-detection">Dead Schema Detection</a>
+          <a href="#import-deduplication">Import Deduplication</a>
           <a href="#test-scaffolding">Test Scaffolding</a>
           <a href="#audit-logging">Audit Logging</a>
           <a href="#drift-detection">Schema Drift Detection</a>
@@ -1254,6 +1256,14 @@ const userSchema = z.object({
               <td><code>.mixed()</code></td>
               <td><code>z.unknown()</code></td>
             </tr>
+            <tr>
+              <td><code>.isTrue()</code></td>
+              <td><code>z.literal(true)</code></td>
+            </tr>
+            <tr>
+              <td><code>.isFalse()</code></td>
+              <td><code>z.literal(false)</code></td>
+            </tr>
           </tbody>
         </table>
 
@@ -1480,6 +1490,16 @@ if (!result.success) {
               <td>Moved to <code>zod/v4/core</code></td>
               <td>Import warning</td>
             </tr>
+            <tr>
+              <td><code>.strip()</code></td>
+              <td>Removed (default behavior in v4)</td>
+              <td>Auto-removed</td>
+            </tr>
+            <tr>
+              <td><code>z.preprocess(fn, schema)</code></td>
+              <td><code>z.pipe(z.unknown(), z.transform(fn), schema)</code></td>
+              <td>Auto-transformed</td>
+            </tr>
           </tbody>
         </table>
         <p style="margin-top: 1rem; color: var(--muted);">Zod v4 also delivers up to 14x faster parsing performance. See the <a href="https://zod.dev/v4/changelog" style="color: var(--accent);">Zod v4 changelog</a> for the full list of changes.</p>
@@ -1560,6 +1580,18 @@ const User = z.object({
               <td><code>.refine(fn)</code></td>
               <td><code>v.check(fn)</code></td>
             </tr>
+            <tr>
+              <td><code>.nanoid()</code></td>
+              <td><code>v.pipe(schema, v.nanoid())</code></td>
+            </tr>
+            <tr>
+              <td><code>.base64()</code></td>
+              <td><code>v.pipe(schema, v.base64())</code></td>
+            </tr>
+            <tr>
+              <td><code>.hexColor()</code></td>
+              <td><code>v.pipe(schema, v.hexColor())</code></td>
+            </tr>
           </tbody>
         </table>
         <div class="callout callout-warning">
@@ -1567,7 +1599,7 @@ const User = z.object({
           <p>
             Valibot uses a functional pipe-based API rather than method chaining.
             Complex Zod schemas with deep chaining may need manual adjustment
-            after migration.
+            after migration. Valibot v1 added many new validators (nanoid, base64, hexColor, isoWeek, and more) that are now supported.
           </p>
         </div>
 
@@ -1901,6 +1933,14 @@ const productSchema = z.object({
             </tr>
           </tbody>
         </table>
+        <div class="callout callout-info">
+          <div class="callout-title">Security</div>
+          <p>
+            Regex patterns in governance rules (e.g., <code>naming-convention</code>) are protected against
+            ReDoS attacks. Patterns longer than 500 characters are rejected, and invalid patterns fail
+            safely without crashing the process.
+          </p>
+        </div>
 
         <h2 id="plugins-config">Plugin Configuration</h2>
         <p>
@@ -2195,6 +2235,43 @@ const productSchema = z.object({
           before or after migration to reduce maintenance burden.
         </p>
 
+        <h2 id="dead-schema-detection">Dead Schema Detection</h2>
+        <p>
+          Find schema definitions that are never referenced elsewhere in your codebase
+          (<span class="badge">Individual+</span>):
+        </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--dedup</span></code></pre>
+        <p>
+          Scans for variable declarations that use schema library patterns (<code>z.</code>, <code>yup.</code>,
+          <code>Joi.</code>, etc.) and checks if those variables are referenced in other files or elsewhere in the
+          same file. Exported schemas are considered "used" and won't be flagged. Reports the total schema count
+          and a list of unused schemas with file paths and line numbers.
+        </p>
+        <div class="callout callout-info">
+          <div class="callout-title">Tip</div>
+          <p>
+            Run dead schema detection after migration to clean up schemas that were only needed by the
+            source library. Removing unused code reduces maintenance burden and improves build times.
+          </p>
+        </div>
+
+        <h2 id="import-deduplication">Import Deduplication</h2>
+        <p>
+          Detect duplicate import declarations from the same module within files
+          (<span class="badge">Free</span>):
+        </p>
+        <p>
+          After migration, files may end up with multiple import statements from the same module &mdash;
+          for example, two <code>import { ... } from 'zod'</code> lines. The import deduplicator detects these
+          and suggests merged imports for cleaner code.
+        </p>
+        <pre><code><span class="comment">// Before (duplicate imports)</span>
+import { z } from 'zod';
+import { ZodError } from 'zod';
+
+<span class="comment">// Suggested merge</span>
+import { z, ZodError } from 'zod';</code></pre>
+
         <h2 id="test-scaffolding">Test Scaffolding</h2>
         <p>
           Generate validation test files after migration
@@ -2218,6 +2295,14 @@ const productSchema = z.object({
           compliance and traceability. Enhanced with metadata collection (git commit, branch, CI provider),
           JSON/CSV export, and date range filtering.
         </p>
+        <div class="callout callout-info">
+          <div class="callout-title">Data Integrity</div>
+          <p>
+            All persisted state files (audit logs, approval requests, incremental migration state) are
+            validated with runtime type guards on read. Corrupted or tampered files are safely rejected
+            instead of causing runtime errors.
+          </p>
+        </div>
 
         <!-- DRIFT DETECTION -->
         <h2 id="drift-detection">Schema Drift Detection</h2>
@@ -2418,11 +2503,20 @@ jobs:
           <li><code>"generic"</code> (default) &mdash; sends raw event JSON payload</li>
         </ul>
 
+        <h3>Webhook Options</h3>
         <p>
           Webhooks are signed with HMAC-SHA256 via the <code>X-SchemaShift-Signature</code> header
           when a <code>secret</code> is configured. Compatible with Slack, Microsoft Teams, Zapier,
           or any HTTP endpoint.
         </p>
+        <p>
+          You can configure a custom timeout per webhook (default: 10 seconds):
+        </p>
+        <pre><code>{
+  <span class="string">"url"</span>: <span class="string">"https://slow-api.example.com/webhook"</span>,
+  <span class="string">"events"</span>: [<span class="string">"migration_completed"</span>],
+  <span class="string">"timeoutMs"</span>: <span class="number">15000</span>
+}</code></pre>
 
         <!-- CROSS-FIELD PATTERNS -->
         <h2 id="cross-field-patterns">Cross-Field Validation Helpers</h2>
@@ -2949,6 +3043,20 @@ include:
             <tr>
               <td>Type deduplication</td>
               <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Dead schema detection</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>Import deduplication</td>
+              <td>✓</td>
               <td>✓</td>
               <td>✓</td>
               <td>✓</td>
