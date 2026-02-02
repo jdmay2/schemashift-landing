@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Formik Validation Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Migrate Formik validation from Yup to Zod or other schema libraries. Understand Formik's tight Yup coupling, adapter options, and recommended migration strategies."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/formik-migration.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/formik-migration.html" />
+    <meta property="og:title" content="Formik Validation Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Migrate Formik validation from Yup to Zod or other schema libraries. Understand Formik's tight Yup coupling, adapter options, and recommended migration strategies." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Formik Validation Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Migrate Formik validation from Yup to Zod or other schema libraries. Understand Formik's tight Yup coupling, adapter options, and recommended migration strategies." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I use Zod with Formik?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, but Formik does not natively support Zod. You need an adapter package like zod-formik-adapter or toFormikValidationSchema to bridge the two. Formik's validationSchema prop expects a Yup-compatible API, so you must wrap your Zod schema with an adapter that translates Zod's validation and error format to what Formik expects."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Should I migrate Formik from Yup to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It depends on your goals. If you are standardizing on Zod across your project (for tRPC, Next.js Server Actions, etc.), migrating Formik schemas makes sense for consistency. However, Formik has native Yup support, so using Zod requires an adapter. Consider migrating to React Hook Form if you want first-class Zod support without adapters."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SchemaShift automatically update Formik integration?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "SchemaShift migrates the schema definitions (Yup to Zod conversion) and adds TODO comments where Formik integration needs manual updates. Unlike React Hook Form which uses a clean resolver pattern, Formik's tight Yup coupling means the validationSchema prop and adapter setup require manual configuration with a package like zod-formik-adapter."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        Framework Guides
+        <span>&rsaquo;</span>
+        Formik
+      </nav>
+
+      <div class="guide-header">
+        <h1>Formik Validation Migration</h1>
+        <p>
+          Formik was built with first-class Yup support &mdash; its <code>validationSchema</code>
+          prop expects a Yup schema object directly. This tight coupling means migrating to a
+          different schema library requires an adapter layer. SchemaShift handles the schema
+          conversion and flags where manual Formik integration work is needed.
+        </p>
+      </div>
+
+      <h2>Understanding the Challenge</h2>
+      <p>
+        Unlike React Hook Form's resolver architecture (which cleanly separates form handling from
+        validation), Formik's <code>validationSchema</code> prop is designed around Yup's API. When
+        you pass a schema to Formik, it calls <code>schema.validate()</code> and expects Yup's
+        error format (<code>ValidationError</code> with a <code>path</code> property). This means
+        you cannot simply swap in a Zod schema &mdash; you need an adapter.
+      </p>
+
+      <h2>Before &amp; After</h2>
+      <p>
+        Here is how a Formik form looks before and after migrating the schema from Yup to Zod:
+      </p>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (Formik + Yup)</div>
+          <pre><code><span class="cmd">import</span> { Formik, Form, Field } <span class="cmd">from</span> <span class="string">'formik'</span>;
+<span class="cmd">import</span> * <span class="cmd">as</span> yup <span class="cmd">from</span> <span class="string">'yup'</span>;
+
+<span class="cmd">const</span> schema = yup.object({
+  email: yup.string().email().required(),
+  name: yup.string().min(<span class="flag">2</span>).required(),
+});
+
+&lt;Formik
+  validationSchema={schema}
+  initialValues={{ email: <span class="string">''</span>, name: <span class="string">''</span> }}
+  onSubmit={handleSubmit}
+&gt;
+  ...
+&lt;/Formik&gt;</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (Formik + Zod + Adapter)</div>
+          <pre><code><span class="cmd">import</span> { Formik, Form, Field } <span class="cmd">from</span> <span class="string">'formik'</span>;
+<span class="cmd">import</span> { z } <span class="cmd">from</span> <span class="string">'zod'</span>;
+<span class="cmd">import</span> { toFormikValidationSchema }
+  <span class="cmd">from</span> <span class="string">'zod-formik-adapter'</span>;
+
+<span class="cmd">const</span> schema = z.object({
+  email: z.string().email(),
+  name: z.string().min(<span class="flag">2</span>),
+});
+
+&lt;Formik
+  validationSchema={toFormikValidationSchema(schema)}
+  initialValues={{ email: <span class="string">''</span>, name: <span class="string">''</span> }}
+  onSubmit={handleSubmit}
+&gt;
+  ...
+&lt;/Formik&gt;</code></pre>
+        </div>
+      </div>
+      <p>
+        The key difference is the <code>toFormikValidationSchema()</code> wrapper around the Zod
+        schema. This adapter translates Zod's validation behavior and error format into what Formik
+        expects.
+      </p>
+
+      <h2>Migration Strategy</h2>
+      <p>
+        The recommended approach is to migrate in two phases:
+      </p>
+
+      <h3>Phase 1: Migrate Schema Definitions</h3>
+      <p>
+        Use SchemaShift to convert all Yup schemas to Zod. SchemaShift adds
+        <code>TODO(schemashift)</code> comments where Formik integration needs manual attention:
+      </p>
+      <pre><code><span class="comment"># Convert schemas, get TODO comments for Formik integration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod
+
+<span class="comment"># Install the Formik adapter</span>
+<span class="cmd">npm</span> install zod-formik-adapter</code></pre>
+
+      <h3>Phase 2: Update Formik Integration</h3>
+      <p>
+        After schema conversion, manually update each Formik component to wrap the new Zod schema
+        with the adapter:
+      </p>
+      <ul>
+        <li>Import <code>toFormikValidationSchema</code> from <code>zod-formik-adapter</code></li>
+        <li>Wrap each <code>validationSchema</code> prop: <code>validationSchema={toFormikValidationSchema(schema)}</code></li>
+        <li>Test form submission and error display</li>
+      </ul>
+
+      <div class="callout callout-warning">
+        <div class="callout-title">Formik Maintenance Status</div>
+        <p>
+          Formik is no longer actively maintained. If you are migrating schemas as part of a larger
+          modernization effort, consider moving to React Hook Form which has a clean resolver
+          pattern with first-class support for Zod, Yup, Joi, and Valibot. See the
+          <a href="react-hook-form-migration.html">React Hook Form migration guide</a>.
+        </p>
+      </div>
+
+      <h2>Adapter Options</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Package</th>
+            <th>Approach</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>zod-formik-adapter</code></td>
+            <td>Wraps Zod schema with <code>toFormikValidationSchema()</code></td>
+            <td>Most popular, maps Zod errors to Formik's expected format</td>
+          </tr>
+          <tr>
+            <td>Custom <code>validate</code> function</td>
+            <td>Use Formik's <code>validate</code> prop instead of <code>validationSchema</code></td>
+            <td>No extra dependency; manually call <code>schema.safeParse()</code> and map errors</td>
+          </tr>
+          <tr>
+            <td>Keep Yup for Formik</td>
+            <td>Only migrate non-Formik schemas to Zod</td>
+            <td>Avoids adapter complexity but maintains two schema libraries</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>validationSchema expects Yup API:</strong> Formik's <code>validationSchema</code>
+          prop internally calls <code>schema.validate(values, { abortEarly: false })</code> and
+          expects a Yup <code>ValidationError</code>. Passing a raw Zod schema without an adapter
+          will silently fail or throw unexpected errors.
+        </li>
+        <li>
+          <strong>Error path mapping:</strong> Yup uses dot-notation paths
+          (<code>address.street</code>) for nested errors. The <code>zod-formik-adapter</code>
+          handles this translation, but if you write a custom <code>validate</code> function, you
+          need to flatten Zod's error format to match Formik's <code>{ [field]: message }</code>
+          structure.
+        </li>
+        <li>
+          <strong>Async validation:</strong> If your Yup schemas use async validators
+          (<code>.test()</code> with async functions), remember that Formik will call
+          <code>validateAsync</code>. The Zod adapter handles this, but ensure your custom validate
+          function returns a Promise if using async Zod refinements.
+        </li>
+        <li>
+          <strong>Field-level validation:</strong> Formik supports both form-level
+          (<code>validationSchema</code>) and field-level (<code>validate</code> prop on
+          <code>&lt;Field&gt;</code>) validation. SchemaShift migrates form-level schemas; any
+          field-level Yup validators need to be converted manually.
+        </li>
+      </ul>
+
+      <h2>After Migration</h2>
+      <ul class="checklist">
+        <li>Install <code>zod-formik-adapter</code> or implement a custom validate function</li>
+        <li>Wrap each <code>validationSchema</code> with <code>toFormikValidationSchema()</code></li>
+        <li>Review all <code>TODO(schemashift)</code> comments in migrated files</li>
+        <li>Test form submission, validation errors, and error message display</li>
+        <li>Check nested field error paths render correctly</li>
+        <li>Consider migrating to React Hook Form for native Zod support</li>
+      </ul>
+
+      <div class="faq-section">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <h3>Can I use Zod with Formik?</h3>
+          <p>
+            Yes, but Formik does not natively support Zod. You need an adapter package like
+            <code>zod-formik-adapter</code> that provides <code>toFormikValidationSchema()</code>
+            to bridge the two. Formik's <code>validationSchema</code> prop expects a
+            Yup-compatible API, so you must wrap your Zod schema with an adapter that translates
+            Zod's validation and error format.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Should I migrate Formik from Yup to Zod?</h3>
+          <p>
+            It depends on your goals. If you are standardizing on Zod across your project (for
+            tRPC, Next.js Server Actions, etc.), migrating Formik schemas makes sense for
+            consistency. However, Formik has native Yup support, so using Zod requires an adapter.
+            Consider migrating to React Hook Form if you want first-class Zod support without
+            adapters.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does SchemaShift automatically update Formik integration?</h3>
+          <p>
+            SchemaShift migrates the schema definitions (Yup to Zod conversion) and adds TODO
+            comments where Formik integration needs manual updates. Unlike React Hook Form which
+            uses a clean resolver pattern, Formik's tight Yup coupling means the
+            <code>validationSchema</code> prop and adapter setup require manual configuration.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup to Zod</strong>
+          <span>Full guide to migrating Yup schemas to Zod with all conversion patterns.</span>
+        </a>
+        <a href="react-hook-form-migration.html">
+          <strong>React Hook Form Migration</strong>
+          <span>RHF's resolver pattern makes schema migration seamless &mdash; no adapters needed.</span>
+        </a>
+      </div>
+
+      <h2>Get Started</h2>
+      <p>
+        Migrate your Formik schemas first, then update the integration layer. SchemaShift handles
+        the schema conversion and flags where manual work is needed.
+      </p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <p style="margin-top: 1.5rem">
+        The Yup to Zod migration is available on the free tier for up to 10 files.
+        <a href="index.html#pricing">View pricing</a>.
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

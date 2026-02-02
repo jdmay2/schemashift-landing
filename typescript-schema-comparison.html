@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TypeScript Schema Library Comparison 2026 | SchemaShift</title>
+    <meta
+      name="description"
+      content="Compare TypeScript schema validation libraries: Zod, Yup, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema. Bundle sizes, type inference, Standard Schema support, and migration paths."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/typescript-schema-comparison.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/typescript-schema-comparison.html" />
+    <meta property="og:title" content="TypeScript Schema Library Comparison 2026 | SchemaShift" />
+    <meta property="og:description" content="Compare TypeScript schema validation libraries: Zod, Yup, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema. Bundle sizes, type inference, Standard Schema support, and migration paths." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="TypeScript Schema Library Comparison 2026 | SchemaShift" />
+    <meta name="twitter:description" content="Compare TypeScript schema validation libraries: Zod, Yup, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema. Bundle sizes, type inference, and migration paths." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Which TypeScript schema library should I use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "For most projects, Zod is the best default choice due to its excellent TypeScript inference, large ecosystem, and broad framework support. If bundle size is critical, Valibot offers similar type safety at around 1kB gzipped thanks to tree-shaking. For projects already using the Effect ecosystem, Effect Schema integrates naturally. ArkType offers unique string-based syntax with strong type inference. Choose based on your specific needs: ecosystem compatibility, bundle size, API preference, or existing tech stack."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is Standard Schema?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Standard Schema is a specification (v1.0) that defines a common interface for TypeScript schema validation libraries. Libraries implementing Standard Schema can be used interchangeably in frameworks that support the spec, such as tRPC v11, without framework-specific adapters. Zod (v3.23+), Valibot (v1+), ArkType (v2+), and Effect Schema all implement Standard Schema. This means you can switch between these libraries without changing your framework integration code."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I migrate between schema libraries?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use SchemaShift CLI to automate migration between schema libraries. Run schemashift migrate ./src -f <source> -t <target> to convert schemas, type helpers, and form resolver imports. SchemaShift supports migrations between Yup, Zod, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema. Start with schemashift analyze ./src to understand your current schema usage, then run with --dry-run to preview changes before applying."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        TypeScript Schema Comparison
+      </nav>
+
+      <div class="guide-header">
+        <h1>TypeScript Schema Library Comparison</h1>
+        <p>
+          The TypeScript schema validation ecosystem has grown rapidly, with each library offering
+          different trade-offs in bundle size, type inference, API design, and ecosystem
+          compatibility. This guide compares the eight major libraries and helps you choose the
+          right one for your project.
+        </p>
+      </div>
+
+      <h2>Feature Matrix</h2>
+      <div style="overflow-x: auto;">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Zod</th>
+              <th>Yup</th>
+              <th>Joi</th>
+              <th>io-ts</th>
+              <th>Valibot</th>
+              <th>ArkType</th>
+              <th>Superstruct</th>
+              <th>Effect Schema</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Bundle Size (min+gz)</td>
+              <td>~13kB</td>
+              <td>~15kB</td>
+              <td>~35kB</td>
+              <td>~7kB</td>
+              <td>~1kB</td>
+              <td>~30kB</td>
+              <td>~2kB</td>
+              <td>Varies*</td>
+            </tr>
+            <tr>
+              <td>TypeScript Inference</td>
+              <td><span class="check">Excellent</span></td>
+              <td>Good</td>
+              <td>Basic</td>
+              <td><span class="check">Excellent</span></td>
+              <td><span class="check">Excellent</span></td>
+              <td><span class="check">Excellent</span></td>
+              <td>Good</td>
+              <td><span class="check">Excellent</span></td>
+            </tr>
+            <tr>
+              <td>Standard Schema 1.0</td>
+              <td><span class="check">v3.23+</span></td>
+              <td><span class="cross">&mdash;</span></td>
+              <td><span class="cross">&mdash;</span></td>
+              <td><span class="cross">&mdash;</span></td>
+              <td><span class="check">v1+</span></td>
+              <td><span class="check">v2+</span></td>
+              <td><span class="cross">&mdash;</span></td>
+              <td><span class="check">Yes</span></td>
+            </tr>
+            <tr>
+              <td>API Style</td>
+              <td>Fluent chain</td>
+              <td>Fluent chain</td>
+              <td>Fluent chain</td>
+              <td>FP codecs</td>
+              <td>Pipe-based</td>
+              <td>String syntax</td>
+              <td>Bare functions</td>
+              <td>Composable</td>
+            </tr>
+            <tr>
+              <td>npm Weekly Downloads</td>
+              <td>~28M</td>
+              <td>~8M</td>
+              <td>~10M</td>
+              <td>~1M</td>
+              <td>~2M</td>
+              <td>~200K</td>
+              <td>~3M</td>
+              <td>~500K</td>
+            </tr>
+            <tr>
+              <td>Active Maintenance</td>
+              <td><span class="check">Yes</span></td>
+              <td><span class="check">Yes</span></td>
+              <td><span class="check">Yes</span></td>
+              <td><span style="color: var(--yellow);">Deprecated</span></td>
+              <td><span class="check">Yes</span></td>
+              <td><span class="check">Yes</span></td>
+              <td><span class="check">Yes</span></td>
+              <td><span class="check">Yes</span></td>
+            </tr>
+            <tr>
+              <td>Tree-Shakeable</td>
+              <td>No</td>
+              <td>No</td>
+              <td>No</td>
+              <td>Yes</td>
+              <td><span class="check">Yes</span></td>
+              <td>No</td>
+              <td>Yes</td>
+              <td>Yes</td>
+            </tr>
+            <tr>
+              <td>Migration Available</td>
+              <td><a href="migrate-zod-v3-to-v4.html">v3&rarr;v4</a></td>
+              <td><a href="migrate-yup-to-zod.html">Yup&rarr;Zod</a></td>
+              <td><a href="migrate-joi-to-zod.html">Joi&rarr;Zod</a></td>
+              <td><a href="migrate-io-ts-to-zod.html">io-ts&rarr;Zod</a></td>
+              <td><a href="migrate-zod-to-valibot.html">Zod&harr;Valibot</a></td>
+              <td><a href="migrate-zod-to-arktype.html">Zod&harr;ArkType</a></td>
+              <td><a href="migrate-zod-to-superstruct.html">Zod&harr;Superstruct</a></td>
+              <td><a href="migrate-io-ts-to-effect.html">io-ts&rarr;Effect</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--muted);">
+        * Effect Schema's bundle size depends on how much of the Effect ecosystem is already in
+        your project. If you are already using Effect, the marginal cost is minimal.
+      </p>
+
+      <h2>Library Overviews</h2>
+
+      <h3>Zod</h3>
+      <p>
+        The most popular TypeScript schema library. Zod offers an intuitive fluent API, excellent
+        type inference, and the largest ecosystem of integrations (tRPC, React Hook Form, Next.js,
+        Drizzle ORM, and more). Zod v4 brought significant performance improvements and API
+        refinements. Choose Zod when ecosystem compatibility and community support are priorities.
+      </p>
+
+      <h3>Yup</h3>
+      <p>
+        One of the original JavaScript validation libraries, Yup is still widely used in Formik
+        projects. It has a similar fluent API to Zod but was designed before TypeScript-first became
+        the norm. TypeScript support has improved over time but type inference is not as tight as
+        Zod or Valibot. Choose Yup if you are using Formik and need its native integration.
+      </p>
+
+      <h3>Joi</h3>
+      <p>
+        The most feature-rich validation library, originally from the Hapi ecosystem. Joi excels at
+        complex validation scenarios with a vast API surface. However, its large bundle size
+        (~35kB) and limited TypeScript inference make it less suited for modern TypeScript
+        applications. Choose Joi for server-side validation where bundle size does not matter and
+        you need advanced validation features.
+      </p>
+
+      <h3>io-ts</h3>
+      <p>
+        A functional programming approach to runtime validation using TypeScript codecs. Built on
+        fp-ts, io-ts provides excellent type inference but has a steep learning curve for developers
+        unfamiliar with functional programming patterns. <strong>io-ts is now deprecated</strong>
+        &mdash; the maintainer recommends migrating to Effect Schema. Choose io-ts only if your
+        project already uses it; otherwise, consider Zod or Effect Schema.
+      </p>
+
+      <h3>Valibot</h3>
+      <p>
+        The bundle-size champion at approximately 1kB gzipped thanks to full tree-shaking. Valibot
+        uses a pipe-based API that only includes the validators you actually use. It offers
+        TypeScript inference on par with Zod and supports Standard Schema 1.0. Choose Valibot when
+        bundle size is a primary concern (mobile apps, edge functions, client-heavy applications).
+      </p>
+
+      <h3>ArkType</h3>
+      <p>
+        A unique approach using string-based syntax that reads like TypeScript type annotations
+        (<code>type({ name: "string", age: "number > 0" })</code>). ArkType provides excellent
+        type inference and claims the fastest validation performance. The trade-off is a larger
+        bundle size and a syntax that may feel unfamiliar. Choose ArkType if you value concise
+        schema definitions and performance.
+      </p>
+
+      <h3>Superstruct</h3>
+      <p>
+        A lightweight library (~2kB) using bare function composition instead of method chaining.
+        Superstruct is tree-shakeable and has a clean, minimal API. It has good TypeScript support
+        but a smaller ecosystem than Zod. Choose Superstruct for projects that need a small footprint
+        with a straightforward API.
+      </p>
+
+      <h3>Effect Schema</h3>
+      <p>
+        Part of the Effect ecosystem for building type-safe, composable TypeScript applications.
+        Effect Schema provides rich validation with transformations, encoding/decoding, and
+        integration with the broader Effect toolkit. Choose Effect Schema if your project already
+        uses Effect or you need advanced data transformation pipelines.
+      </p>
+
+      <h2>Standard Schema 1.0</h2>
+      <p>
+        Standard Schema is a specification that defines a common interface for TypeScript schema
+        validation libraries. It enables frameworks like tRPC v11 to accept any conforming schema
+        library without library-specific adapters.
+      </p>
+      <p>
+        Libraries implementing Standard Schema: <strong>Zod</strong> (v3.23+),
+        <strong>Valibot</strong> (v1+), <strong>ArkType</strong> (v2+), and
+        <strong>Effect Schema</strong>. This means you can use any of these libraries
+        interchangeably in Standard Schema-compatible frameworks.
+      </p>
+      <div class="callout callout-info">
+        <div class="callout-title">What This Means in Practice</div>
+        <p>
+          If your framework supports Standard Schema (tRPC v11, for example), you can switch
+          between Zod, Valibot, ArkType, or Effect Schema without changing any framework
+          integration code. You only need to update the schema definitions themselves &mdash; which
+          is exactly what SchemaShift automates.
+        </p>
+      </div>
+
+      <h2>Choosing the Right Library</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Recommended Library</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ecosystem &amp; community</td>
+            <td><strong>Zod</strong></td>
+            <td>Largest ecosystem, most framework integrations, most tutorials and resources</td>
+          </tr>
+          <tr>
+            <td>Bundle size</td>
+            <td><strong>Valibot</strong></td>
+            <td>~1kB with tree-shaking; ideal for client-side and edge deployments</td>
+          </tr>
+          <tr>
+            <td>Functional programming</td>
+            <td><strong>Effect Schema</strong></td>
+            <td>Native Effect integration, composable pipelines, encoding/decoding</td>
+          </tr>
+          <tr>
+            <td>Concise syntax</td>
+            <td><strong>ArkType</strong></td>
+            <td>String-based definitions read like TypeScript types, fast validation</td>
+          </tr>
+          <tr>
+            <td>Minimal footprint</td>
+            <td><strong>Superstruct</strong></td>
+            <td>~2kB, clean API, tree-shakeable, no method chaining</td>
+          </tr>
+          <tr>
+            <td>Formik integration</td>
+            <td><strong>Yup</strong></td>
+            <td>Native Formik support without adapters</td>
+          </tr>
+          <tr>
+            <td>Server-side validation</td>
+            <td><strong>Joi</strong></td>
+            <td>Most feature-rich validation API, battle-tested in production</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Migrate Between Any Library</h2>
+      <p>
+        SchemaShift automates migration between all eight libraries. Analyze your current schema
+        usage, preview the migration, and convert with a single command:
+      </p>
+      <pre><code><span class="comment"># Analyze your project</span>
+<span class="cmd">schemashift</span> <span class="string">analyze</span> <span class="flag">./src</span>
+
+<span class="comment"># Preview migration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--dry-run</span>
+
+<span class="comment"># Compare libraries side-by-side</span>
+<span class="cmd">schemashift</span> <span class="string">compare</span> <span class="flag">./src</span> <span class="flag">-f</span> zod <span class="flag">-t</span> valibot
+
+<span class="comment"># Run migration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod</code></pre>
+
+      <div class="faq-section">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <h3>Which TypeScript schema library should I use?</h3>
+          <p>
+            For most projects, <strong>Zod</strong> is the best default choice due to its excellent
+            TypeScript inference, large ecosystem, and broad framework support. If bundle size is
+            critical, <strong>Valibot</strong> offers similar type safety at around 1kB gzipped
+            thanks to tree-shaking. For projects already using the Effect ecosystem,
+            <strong>Effect Schema</strong> integrates naturally. Choose based on your specific
+            needs: ecosystem compatibility, bundle size, API preference, or existing tech stack.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What is Standard Schema?</h3>
+          <p>
+            Standard Schema is a specification (v1.0) that defines a common interface for
+            TypeScript schema validation libraries. Libraries implementing Standard Schema can be
+            used interchangeably in frameworks that support the spec, such as tRPC v11, without
+            framework-specific adapters. Zod (v3.23+), Valibot (v1+), ArkType (v2+), and
+            Effect Schema all implement Standard Schema.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>How do I migrate between schema libraries?</h3>
+          <p>
+            Use SchemaShift CLI to automate migration. Run
+            <code>schemashift migrate ./src -f &lt;source&gt; -t &lt;target&gt;</code> to convert
+            schemas, type helpers, and form resolver imports. SchemaShift supports migrations
+            between Yup, Zod, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema. Start
+            with <code>schemashift analyze ./src</code> to understand your current schema usage,
+            then run with <code>--dry-run</code> to preview changes before applying.
+          </p>
+        </div>
+      </div>
+
+      <h2>All Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup to Zod</strong>
+          <span>Migrate Yup schemas to Zod with automatic AST-based transformation.</span>
+        </a>
+        <a href="migrate-joi-to-zod.html">
+          <strong>Joi to Zod</strong>
+          <span>Convert Joi validation to Zod for better TypeScript inference.</span>
+        </a>
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 to v4</strong>
+          <span>Upgrade Zod with automatic handling of 20+ breaking changes.</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod to Valibot</strong>
+          <span>Switch to Valibot for a dramatically smaller bundle size.</span>
+        </a>
+        <a href="migrate-io-ts-to-zod.html">
+          <strong>io-ts to Zod</strong>
+          <span>Migrate from the deprecated io-ts to Zod.</span>
+        </a>
+        <a href="migrate-zod-to-arktype.html">
+          <strong>Zod to ArkType</strong>
+          <span>Convert to ArkType's concise string-based syntax.</span>
+        </a>
+        <a href="migrate-zod-to-superstruct.html">
+          <strong>Zod to Superstruct</strong>
+          <span>Move to Superstruct's lightweight function-based API.</span>
+        </a>
+        <a href="migrate-io-ts-to-effect.html">
+          <strong>io-ts to Effect Schema</strong>
+          <span>Transition from io-ts to Effect Schema within the Effect ecosystem.</span>
+        </a>
+        <a href="react-hook-form-migration.html">
+          <strong>React Hook Form</strong>
+          <span>Migrate form resolvers alongside your schema library.</span>
+        </a>
+        <a href="formik-migration.html">
+          <strong>Formik</strong>
+          <span>Navigate Formik's tight Yup coupling during migration.</span>
+        </a>
+        <a href="trpc-schema-migration.html">
+          <strong>tRPC</strong>
+          <span>Upgrade tRPC schemas with ecosystem compatibility checks.</span>
+        </a>
+      </div>
+
+      <h2>Get Started</h2>
+      <p>
+        Use SchemaShift to automate migration between any of these libraries. Analyze your project,
+        preview changes, and migrate with confidence.
+      </p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <p style="margin-top: 1.5rem">
+        Basic migrations are free for up to 10 files. Need unlimited files or advanced features?
+        <a href="index.html#pricing">View pricing</a>.
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

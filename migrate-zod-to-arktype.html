@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate Zod to ArkType - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to migrate Zod schemas to ArkType. Convert z.object and z.string() to ArkType's string-based type syntax with type({}) definitions and automatic type inference."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-zod-to-arktype.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-zod-to-arktype.html" />
+    <meta property="og:title" content="Migrate Zod to ArkType - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to migrate Zod schemas to ArkType's string-based type syntax. Convert method chains to concise type definitions." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate Zod to ArkType - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to migrate Zod schemas to ArkType's string-based type syntax. Convert method chains to concise type definitions." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is ArkType's string-based type system?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ArkType uses string literals to define types instead of method chains. For example, z.string().email() in Zod becomes simply 'string.email' in ArkType. Object schemas use type({ name: 'string', age: 'number' }) instead of z.object({ name: z.string(), age: z.number() }). This provides more concise syntax with full TypeScript type inference."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I handle Zod .refine() in ArkType?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Zod's .refine() maps to ArkType's .narrow() method. For example, z.number().refine(n => n > 0) becomes type('number').narrow(n => n > 0). For more complex validation with type narrowing, ArkType's .narrow() provides stronger TypeScript inference than Zod's refine."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does ArkType support branded types like Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ArkType does not have a direct equivalent to Zod's .brand(). If you rely on branded types for nominal typing, you will need to use TypeScript's built-in branded type pattern (intersection with a unique symbol) or restructure your type system. SchemaShift adds TODO comments for branded type usage."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="index.html#guides">Migration Guides</a>
+        <span>&rsaquo;</span>
+        Zod to ArkType
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate Zod to ArkType</h1>
+        <p>
+          A comprehensive guide to converting Zod schemas to ArkType's string-based type system.
+          Learn how to replace <code>z.object({})</code> with <code>type({})</code>, convert method chains
+          to concise string syntax like <code>"string.email"</code>, and leverage ArkType's superior
+          TypeScript inference.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>Convert your Zod schemas to ArkType with one command:</p>
+      <pre><code><span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to arktype</span></code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Pro+ Feature</div>
+        <p>Zod to ArkType migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">BEFORE &mdash; Zod</div>
+          <pre><code><span class="comment">// schemas/user.ts</span>
+import { z } from 'zod';
+
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  age: z.number().int().positive(),
+  role: z.enum(['admin', 'user', 'guest']),
+  isActive: z.boolean(),
+  tags: z.array(z.string()),
+  score: z.number().optional(),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;
+
+const ResponseSchema = z.union([
+  z.object({ status: z.literal('ok'), data: UserSchema }),
+  z.object({ status: z.literal('error'), message: z.string() }),
+]);
+
+const validated = UserSchema.parse(input);
+const safe = UserSchema.safeParse(input);</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">AFTER &mdash; ArkType</div>
+          <pre><code><span class="comment">// schemas/user.ts</span>
+import { type } from 'arktype';
+
+const UserSchema = type({
+  id: 'string.uuid',
+  name: '1 <= string <= 100',
+  email: 'string.email',
+  age: 'number.integer > 0',
+  role: "'admin' | 'user' | 'guest'",
+  isActive: 'boolean',
+  tags: 'string[]',
+  'score?': 'number',
+});
+
+type User = typeof UserSchema.infer;
+
+const ResponseSchema = type(
+  { status: "'ok'", data: UserSchema },
+  '|',
+  { status: "'error'", message: 'string' }
+);
+
+const validated = UserSchema.assert(input);
+const safe = UserSchema(input);</code></pre>
+        </div>
+      </div>
+
+      <!-- Conversion Table -->
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Zod</th>
+            <th>ArkType</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>z.string()</code></td>
+            <td><code>'string'</code></td>
+            <td>String literal syntax</td>
+          </tr>
+          <tr>
+            <td><code>z.number()</code></td>
+            <td><code>'number'</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.boolean()</code></td>
+            <td><code>'boolean'</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.object({ ... })</code></td>
+            <td><code>type({ ... })</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.string().email()</code></td>
+            <td><code>'string.email'</code></td>
+            <td>Built-in string subtypes</td>
+          </tr>
+          <tr>
+            <td><code>z.string().uuid()</code></td>
+            <td><code>'string.uuid'</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.string().url()</code></td>
+            <td><code>'string.url'</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.string().min(N).max(M)</code></td>
+            <td><code>'N &lt;= string &lt;= M'</code></td>
+            <td>Range expression syntax</td>
+          </tr>
+          <tr>
+            <td><code>z.number().int()</code></td>
+            <td><code>'number.integer'</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.number().positive()</code></td>
+            <td><code>'number &gt; 0'</code></td>
+            <td>Comparison expression</td>
+          </tr>
+          <tr>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td><code>"'a' | 'b'"</code></td>
+            <td>Union of literals as string</td>
+          </tr>
+          <tr>
+            <td><code>z.literal('x')</code></td>
+            <td><code>"'x'"</code></td>
+            <td>Quoted string literal</td>
+          </tr>
+          <tr>
+            <td><code>z.array(z.string())</code></td>
+            <td><code>'string[]'</code></td>
+            <td>Array shorthand</td>
+          </tr>
+          <tr>
+            <td><code>.optional()</code></td>
+            <td><code>'type?'</code> (in object key)</td>
+            <td>Append <code>?</code> to the key name</td>
+          </tr>
+          <tr>
+            <td><code>z.union([A, B])</code></td>
+            <td><code>type(A, '|', B)</code></td>
+            <td>Infix union syntax</td>
+          </tr>
+          <tr>
+            <td><code>z.infer&lt;typeof X&gt;</code></td>
+            <td><code>typeof X.infer</code></td>
+            <td>Property access, not generic</td>
+          </tr>
+          <tr>
+            <td><code>.refine(fn)</code></td>
+            <td><code>.narrow(fn)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>.transform(fn)</code></td>
+            <td><code>.pipe(fn)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.record(K, V)</code></td>
+            <td><code>type('Record&lt;string, V&gt;')</code></td>
+            <td>Uses TypeScript syntax</td>
+          </tr>
+          <tr>
+            <td><code>schema.parse(input)</code></td>
+            <td><code>schema.assert(input)</code></td>
+            <td>Throws on failure</td>
+          </tr>
+          <tr>
+            <td><code>schema.safeParse(input)</code></td>
+            <td><code>schema(input)</code></td>
+            <td>Returns data or ArkErrors</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>String-based type system paradigm shift:</strong>
+          ArkType defines types as strings like <code>'string.email'</code> and <code>'number &gt; 0'</code> instead
+          of method chains. This is fundamentally different from Zod and requires understanding ArkType's
+          domain-specific language. TypeScript still provides full type inference from these strings.
+        </li>
+        <li>
+          <strong>Recursive types need scope():</strong>
+          Zod uses <code>z.lazy()</code> for recursive types. ArkType requires <code>scope()</code> to define
+          mutually recursive types: <code>const types = scope({ tree: { value: 'string', children: 'tree[]' } }).export()</code>.
+          This is more powerful but has different ergonomics.
+        </li>
+        <li>
+          <strong>No .brand() equivalent:</strong>
+          ArkType does not support Zod's <code>.brand()</code> for nominal types. If your codebase relies on
+          branded types for type safety, you will need to use TypeScript's manual branding pattern
+          (intersection with <code>{ readonly __brand: unique symbol }</code>). SchemaShift adds TODO comments.
+        </li>
+        <li>
+          <strong>.superRefine() &rarr; .narrow():</strong>
+          Zod's <code>.superRefine()</code> with <code>ctx.addIssue()</code> does not have a direct equivalent.
+          Simple cases map to <code>.narrow()</code>, but multi-issue validation requires ArkType's custom
+          error handling patterns.
+        </li>
+        <li>
+          <strong>Optional fields use key syntax:</strong>
+          In Zod, <code>z.string().optional()</code> makes the value optional. In ArkType, you mark the key
+          itself: <code>type({ 'name?': 'string' })</code>. This means optional is declared in the object
+          definition, not on the type.
+        </li>
+      </ul>
+
+      <!-- Automated Command -->
+      <h2>Automated Migration with SchemaShift</h2>
+      <pre><code><span class="comment"># Dry run to see what changes</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to arktype --dry-run</span>
+
+<span class="comment"># Run the migration</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to arktype</span>
+
+<span class="comment"># With verbose output</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to arktype --verbose --report html</span>
+
+<span class="comment"># Check compatibility first</span>
+<span class="cmd">npx schemashift-cli compat</span> <span class="string">./src</span> <span class="flag">--from zod --to arktype</span></code></pre>
+
+      <!-- Manual Checklist -->
+      <h2>Manual Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Replace <code>import { z } from 'zod'</code> with <code>import { type } from 'arktype'</code></li>
+        <li>Convert <code>z.object({})</code> to <code>type({})</code></li>
+        <li>Convert primitive types to string syntax: <code>z.string()</code> &rarr; <code>'string'</code></li>
+        <li>Convert validations to string expressions: <code>.email()</code> &rarr; <code>'string.email'</code></li>
+        <li>Convert enums to union literals: <code>z.enum(['a','b'])</code> &rarr; <code>"'a' | 'b'"</code></li>
+        <li>Convert optional to key syntax: <code>key: z.string().optional()</code> &rarr; <code>'key?': 'string'</code></li>
+        <li>Replace <code>z.infer&lt;typeof X&gt;</code> with <code>typeof X.infer</code></li>
+        <li>Convert <code>.refine()</code> to <code>.narrow()</code></li>
+        <li>Convert <code>.parse()</code> to <code>.assert()</code></li>
+        <li>Convert <code>.safeParse()</code> to direct call <code>schema(input)</code></li>
+        <li>Convert recursive types to use <code>scope()</code></li>
+        <li>Add TODO comments for <code>.brand()</code> and <code>.superRefine()</code> usage</li>
+        <li>Update <code>package.json</code>: add <code>arktype</code>, remove <code>zod</code></li>
+        <li>Run <code>npx tsc --noEmit</code> to verify type safety</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>What is ArkType's string-based type system?</h3>
+          <p>
+            ArkType uses string literals to define types instead of method chains. For example,
+            <code>z.string().email()</code> in Zod becomes simply <code>'string.email'</code> in ArkType.
+            Object schemas use <code>type({ name: 'string', age: 'number' })</code> instead of
+            <code>z.object({ name: z.string(), age: z.number() })</code>. This provides more concise
+            syntax with full TypeScript type inference.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>How do I handle Zod .refine() in ArkType?</h3>
+          <p>
+            Zod's <code>.refine()</code> maps to ArkType's <code>.narrow()</code> method. For example,
+            <code>z.number().refine(n =&gt; n &gt; 0)</code> becomes <code>type('number').narrow(n =&gt; n &gt; 0)</code>.
+            For more complex validation with type narrowing, ArkType's <code>.narrow()</code> provides stronger
+            TypeScript inference than Zod's refine.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does ArkType support branded types like Zod?</h3>
+          <p>
+            ArkType does not have a direct equivalent to Zod's <code>.brand()</code>. If you rely on branded types
+            for nominal typing, you will need to use TypeScript's built-in branded type pattern (intersection
+            with a unique symbol) or restructure your type system. SchemaShift adds TODO comments for branded
+            type usage that needs manual attention.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-arktype-to-zod.html">
+          <strong>ArkType to Zod</strong>
+          <span>Going the other direction? Convert ArkType definitions back to Zod schemas.</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod to Valibot</strong>
+          <span>Prefer a functional API? Convert Zod to Valibot's pipe-based system.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>Schema Library Comparison</strong>
+          <span>Compare ArkType, Zod, Valibot, and other schema libraries side by side.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <div class="callout callout-success" style="text-align: center; margin: 3rem 0;">
+        <div class="callout-title">Ready to try ArkType?</div>
+        <p style="margin-bottom: 1rem;">
+          SchemaShift converts Zod schemas to ArkType's string syntax automatically, handling type expressions, optional keys, and import rewriting.
+        </p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

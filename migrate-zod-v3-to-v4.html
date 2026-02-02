@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upgrade Zod v3 to v4 - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to upgrading Zod v3 to v4. Covers 20+ breaking changes with automated AST-based transforms, before/after examples, edge cases, and a migration checklist."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-zod-v3-to-v4.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-zod-v3-to-v4.html" />
+    <meta property="og:title" content="Upgrade Zod v3 to v4 - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to upgrading Zod v3 to v4. Covers 20+ breaking changes with automated AST-based transforms, before/after examples, edge cases, and a migration checklist." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Upgrade Zod v3 to v4 - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to upgrading Zod v3 to v4. Covers 20+ breaking changes with automated AST-based transforms, before/after examples, edge cases, and a migration checklist." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- FAQPage JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What breaking changes does Zod v4 introduce?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Zod v4 introduces 20+ breaking changes including: z.record() now requires an explicit key type, .merge() is replaced by .extend() with .shape, z.nativeEnum() becomes z.enum(), .superRefine() becomes .check(), error.errors is renamed to error.issues, invalid_type_error and required_error are unified into a single error parameter, .strip() is removed (default behavior), z.preprocess() is replaced by z.pipe() + z.transform(), error.flatten() moves to z.flattenError(), error.format() moves to z.treeifyError(), and ._def becomes ._zod.def."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I automate the Zod v3 to v4 migration?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. SchemaShift provides an AST-based migration tool that automatically transforms 12+ patterns. Run 'schemashift migrate ./src -f zod-v3 -t v4' to convert your codebase. Use the --dry-run flag first to preview all changes without modifying files."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does ZodError still extend Error in Zod v4?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. In Zod v4, ZodError no longer extends the built-in Error class. Any code that uses 'instanceof Error' to catch ZodError will stop working. You need to use 'instanceof ZodError' or check for the error.issues property instead."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do .default() and .optional() behave differently in Zod v4?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "In Zod v3, z.string().default('hello').optional() would return undefined if no value was provided. In Zod v4, this silently changed so the default value is applied even when the field is optional. Review all .default().optional() combinations after upgrading."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What ecosystem packages need updating for Zod v4?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Several popular packages need updates: zod-validation-error must be upgraded to v5.0.0+, drizzle-zod needs a v4-compatible version, @trpc/server v10 expects Zod v3 (v11 is compatible), @hookform/resolvers needs a matching version, and packages like zod-openapi, zod-prisma, zodios, and zod-form-data may need v4-compatible releases."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is the Zod v3 to v4 migration available in the free tier?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Zod v3 to v4 migration requires the Individual tier ($49 one-time) or higher. The free tier supports Yup to Zod and Joi to Zod migrations. The Individual tier adds unlimited files, Zod v3 to v4, detailed analysis, risk scoring, and git integration."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        Migration Guides
+        <span>/</span>
+        Zod v3 to v4
+      </nav>
+
+      <div class="guide-header">
+        <h1>Upgrade Zod v3 to v4</h1>
+        <p>
+          Zod v4 introduces 20+ breaking changes across its API surface &mdash; from renamed methods
+          and restructured error handling to silent behavioral shifts that can break your application
+          without compiler warnings. This guide covers every change and shows how SchemaShift
+          automates the upgrade with AST-based transforms.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>
+        Migrate your entire <code>src</code> directory from Zod v3 to v4 with a single command:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4</code></pre>
+      <p>
+        Preview changes first without modifying any files:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4 <span class="flag">--dry-run</span></code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Tip</div>
+        <p>
+          Add <code>--verbose</code> to see every transformation applied to each file,
+          or <code>--output-diff -</code> to pipe a unified diff to stdout.
+        </p>
+      </div>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <p>
+        Side-by-side comparison of the most common Zod v3 patterns and their v4 equivalents.
+        SchemaShift handles all of these automatically.
+      </p>
+
+      <h3>z.record() &mdash; explicit key type</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code><span class="comment">// Implicit string key</span>
+const Config = z.record(z.number());</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code><span class="comment">// Explicit key type required</span>
+const Config = z.record(z.string(), z.number());</code></pre>
+        </div>
+      </div>
+
+      <h3>.merge() &rarr; .extend()</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code>const Full = Base.merge(Extra);</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code>const Full = Base.extend(Extra.shape);</code></pre>
+        </div>
+      </div>
+
+      <h3>z.nativeEnum() &rarr; z.enum()</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code>const Status = z.nativeEnum(MyEnum);</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code>const Status = z.enum(MyEnum);</code></pre>
+        </div>
+      </div>
+
+      <h3>.superRefine() &rarr; .check()</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code>schema.superRefine((val, ctx) => {
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    message: 'Invalid',
+  });
+});</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code>schema.check((val, ctx) => {
+  ctx.issues.push({
+    code: z.ZodIssueCode.custom,
+    message: 'Invalid',
+  });
+});</code></pre>
+        </div>
+      </div>
+
+      <h3>error.errors &rarr; error.issues</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code>catch (err) {
+  console.log(err.errors);
+}</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code>catch (err) {
+  console.log(err.issues);
+}</code></pre>
+        </div>
+      </div>
+
+      <h3>Error message params</h3>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Zod v3</div>
+          <pre><code>z.string({
+  invalid_type_error: 'Must be a string',
+  required_error: 'Field is required',
+});</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod v4</div>
+          <pre><code>z.string({
+  error: 'Must be a string',
+});</code></pre>
+        </div>
+      </div>
+
+      <!-- Conversion Table -->
+      <h2>Full Conversion Reference</h2>
+      <p>
+        Every automatic transform that SchemaShift applies during the Zod v3 to v4 migration:
+      </p>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Zod v3 Pattern</th>
+            <th>Zod v4 Equivalent</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>z.record(valueSchema)</code></td>
+            <td><code>z.record(z.string(), valueSchema)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>.merge(other)</code></td>
+            <td><code>.extend(other.shape)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>z.nativeEnum(MyEnum)</code></td>
+            <td><code>z.enum(MyEnum)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>.superRefine(fn)</code></td>
+            <td><code>.check(fn)</code> with <code>ctx.issues.push()</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>error.errors</code></td>
+            <td><code>error.issues</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>invalid_type_error</code></td>
+            <td><code>error</code> (unified param)</td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>required_error</code></td>
+            <td><code>error</code> (unified param)</td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>.strip()</code></td>
+            <td>Removed (default behavior in v4)</td>
+            <td>Auto-removed</td>
+          </tr>
+          <tr>
+            <td><code>z.preprocess(fn, schema)</code></td>
+            <td><code>z.pipe(z.unknown(), z.transform(fn), schema)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>error.flatten()</code></td>
+            <td><code>z.flattenError(error)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>error.format()</code></td>
+            <td><code>z.treeifyError(error)</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>._def</code></td>
+            <td><code>._zod.def</code></td>
+            <td>Auto-transform</td>
+          </tr>
+          <tr>
+            <td><code>.strict()</code></td>
+            <td><code>z.strictObject()</code></td>
+            <td>Deprecation warning</td>
+          </tr>
+          <tr>
+            <td><code>.passthrough()</code></td>
+            <td><code>z.looseObject()</code></td>
+            <td>Deprecation warning</td>
+          </tr>
+          <tr>
+            <td><code>ZodType</code>, <code>ZodSchema</code>, etc.</td>
+            <td>Import from <code>zod/v4/core</code></td>
+            <td>Warning</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases and Gotchas</h2>
+      <p>
+        These changes are not simple find-and-replace. They involve subtle behavioral shifts
+        that can cause runtime bugs without any TypeScript errors:
+      </p>
+      <ul class="gotcha-list">
+        <li>
+          <strong>ZodError no longer extends Error</strong> &mdash;
+          Any code using <code>instanceof Error</code> to catch Zod validation errors will silently
+          stop matching. Switch to <code>instanceof ZodError</code> or check for <code>error.issues</code>.
+        </li>
+        <li>
+          <strong>.transform() runs even when .refine() fails</strong> &mdash;
+          In v3, <code>.refine()</code> before <code>.transform()</code> short-circuited on failure.
+          In v4, the transform executes regardless, which may cause unexpected results or runtime errors
+          if the transform assumes validated data.
+        </li>
+        <li>
+          <strong>.default() + .optional() silent behavior change</strong> &mdash;
+          In v3, <code>z.string().default('hello').optional()</code> returned <code>undefined</code> when
+          no value was provided. In v4, the default value is applied even for optional fields. Review all
+          combinations where <code>.default()</code> is chained with <code>.optional()</code>.
+        </li>
+        <li>
+          <strong>.catch() + .optional() behavior change</strong> &mdash;
+          Similar to <code>.default()</code>, the interaction between <code>.catch()</code> and
+          <code>.optional()</code> has changed in v4. Test all schemas using this combination.
+        </li>
+        <li>
+          <strong>.pipe() is stricter</strong> &mdash;
+          Zod v4 enforces stricter type compatibility within <code>.pipe()</code> chains. Workaround
+          guidance is provided in TODO comments for schemas that need adjustment.
+        </li>
+        <li>
+          <strong>.strict() and .passthrough() deprecated</strong> &mdash;
+          Use <code>z.strictObject()</code> and <code>z.looseObject()</code> instead. The old methods
+          still work but will be removed in a future release.
+        </li>
+        <li>
+          <strong>Utility types moved to zod/v4/core</strong> &mdash;
+          If you import <code>ZodType</code>, <code>ZodSchema</code>, <code>ZodRawShape</code>, or
+          similar utility types, they now live in <code>zod/v4/core</code> instead of the main
+          <code>zod</code> entrypoint.
+        </li>
+      </ul>
+
+      <!-- Automated Migration -->
+      <h2>Automated Migration with SchemaShift</h2>
+      <p>
+        Run a dry-run first to preview every change without modifying your codebase:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4 <span class="flag">--dry-run</span> <span class="flag">--verbose</span></code></pre>
+      <p>
+        Export a unified diff for code review before applying:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4 <span class="flag">--dry-run</span> <span class="flag">--output-diff</span> <span class="string">v4-migration.patch</span></code></pre>
+      <p>
+        When you are ready, run the full migration with a backup:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4</code></pre>
+      <div class="callout callout-success">
+        <div class="callout-title">Automatic Backup</div>
+        <p>
+          SchemaShift creates a timestamped backup before every migration. Use
+          <code>schemashift rollback</code> to restore originals if anything goes wrong.
+        </p>
+      </div>
+      <p>
+        For large codebases, use canary mode to migrate a small percentage first:
+      </p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4 <span class="flag">--canary</span> 20</code></pre>
+
+      <!-- Migration Checklist -->
+      <h2>Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Review all deprecation warnings (<code>.strict()</code>, <code>.passthrough()</code>)</li>
+        <li>Test all <code>instanceof Error</code> checks against <code>ZodError</code></li>
+        <li>Verify <code>.default().optional()</code> combinations behave as expected</li>
+        <li>Check <code>.transform()</code> after <code>.refine()</code> chains for safety</li>
+        <li>Review <code>.catch().optional()</code> combinations</li>
+        <li>Update <code>zod-validation-error</code> to v5.0.0+</li>
+        <li>Update <code>drizzle-zod</code> to a v4-compatible version</li>
+        <li>Verify <code>@trpc/server</code> compatibility (v11 required for Zod v4)</li>
+        <li>Update <code>@hookform/resolvers</code> if using react-hook-form</li>
+        <li>Check <code>zod-openapi</code> / <code>@asteasolutions/zod-to-openapi</code> compatibility</li>
+        <li>Regenerate <code>zod-prisma</code> / <code>zod-prisma-types</code> schemas if applicable</li>
+        <li>Run your full test suite</li>
+        <li>Run <code>schemashift doctor</code> to verify project health post-migration</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>What breaking changes does Zod v4 introduce?</h3>
+          <p>
+            Zod v4 introduces 20+ breaking changes including renamed methods (<code>.superRefine()</code>
+            &rarr; <code>.check()</code>), restructured error handling (<code>error.errors</code> &rarr;
+            <code>error.issues</code>), removed methods (<code>.strip()</code>), unified error params,
+            and several silent behavioral changes around <code>.default()</code>, <code>.catch()</code>,
+            and <code>.transform()</code> ordering.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Can I automate the Zod v3 to v4 migration?</h3>
+          <p>
+            Yes. SchemaShift provides an AST-based migration tool that automatically transforms
+            12+ patterns. Run <code>schemashift migrate ./src -f zod-v3 -t v4</code> to convert your
+            codebase. Use <code>--dry-run</code> first to preview all changes without modifying files.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does ZodError still extend Error in Zod v4?</h3>
+          <p>
+            No. In Zod v4, <code>ZodError</code> no longer extends the built-in <code>Error</code> class.
+            Any code that uses <code>instanceof Error</code> to catch <code>ZodError</code> will stop
+            matching. Use <code>instanceof ZodError</code> or check for <code>error.issues</code> instead.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>How do .default() and .optional() behave differently in v4?</h3>
+          <p>
+            In v3, <code>z.string().default('hello').optional()</code> returned <code>undefined</code>
+            when no value was provided. In v4, the default value is applied even when the field is optional.
+            This is a silent change with no compiler warning &mdash; review all such combinations carefully.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What ecosystem packages need updating?</h3>
+          <p>
+            Key packages: <code>zod-validation-error</code> (upgrade to v5.0.0+),
+            <code>drizzle-zod</code> (needs v4-compatible version),
+            <code>@trpc/server</code> (v11 required),
+            <code>@hookform/resolvers</code> (matching version needed),
+            and <code>zod-openapi</code>, <code>zod-prisma</code>, <code>zodios</code>,
+            <code>zod-form-data</code> may need updates. Run <code>schemashift doctor</code> to detect these automatically.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Is the Zod v3 to v4 migration available in the free tier?</h3>
+          <p>
+            Zod v3 to v4 migration requires the Individual tier ($49 one-time) or higher. The free tier
+            supports Yup &rarr; Zod and Joi &rarr; Zod migrations. Run
+            <code>schemashift pricing</code> for full details.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Migrate Yup to Zod</strong>
+          <span>Convert Yup schemas to Zod with automatic form resolver migration and coercion detection.</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Migrate Zod to Valibot</strong>
+          <span>Switch from Zod to Valibot for smaller bundle sizes with tree-shakeable validation.</span>
+        </a>
+        <a href="trpc-schema-migration.html">
+          <strong>tRPC Schema Migration</strong>
+          <span>Upgrade tRPC projects from Zod v3 to v4 with ecosystem dependency handling.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>TypeScript Schema Library Comparison</strong>
+          <span>Compare Zod, Yup, Joi, Valibot, ArkType, Superstruct, and Effect Schema side by side.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <h2>Ready to Upgrade?</h2>
+      <p>
+        Stop spending hours on manual find-and-replace. SchemaShift handles 20+ Zod v4 breaking
+        changes automatically with full backup and rollback support.
+      </p>
+      <pre><code><span class="cmd">npm install -g schemashift-cli</span></code></pre>
+      <p style="margin-top: 1.5rem;">
+        <a
+          href="https://buy.polar.sh/polar_cl_1Wgutqm927aHklDmVkuRy9R397qGNuKnxzCcB4P4r7q"
+          data-polar-checkout
+          data-polar-checkout-theme="dark"
+          class="btn btn-primary btn-inline"
+        >Get Individual License &mdash; $49</a>
+        <a href="index.html#pricing" class="btn btn-secondary btn-inline" style="margin-top: 0.75rem;">View All Plans</a>
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="index.html">Home</a> &middot;
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+
+    <!-- Polar Embedded Checkout -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@polar-sh/checkout@0.1/dist/embed.global.js"
+      defer
+      data-auto-init
+    ></script>
+  </body>
+</html>

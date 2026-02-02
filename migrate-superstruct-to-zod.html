@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate Superstruct to Zod - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to migrate Superstruct schemas to Zod. Covers object() to z.object, optional() wrapper to .optional(), integer() to z.number().int(), and bare-function-to-namespace conversion."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-superstruct-to-zod.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-superstruct-to-zod.html" />
+    <meta property="og:title" content="Migrate Superstruct to Zod - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to migrate Superstruct schemas to Zod. Covers object() to z.object, optional() wrapper to .optional(), integer() to z.number().int(), and bare-function-to-namespace conversion." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate Superstruct to Zod - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to migrate Superstruct schemas to Zod. Covers object() to z.object, optional() wrapper to .optional(), integer() to z.number().int(), and bare-function-to-namespace conversion." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do Superstruct bare functions map to Zod namespaced methods?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Superstruct uses bare function imports like string(), number(), object() while Zod uses namespaced methods like z.string(), z.number(), z.object(). SchemaShift automatically adds the z. namespace prefix to all schema constructors during migration. Import statements are rewritten from 'import { string, number } from superstruct' to 'import { z } from zod'."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Superstruct's optional() wrapper convert to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Superstruct wraps schemas with optional(string()) while Zod chains .optional() as a method: z.string().optional(). SchemaShift automatically inverts the nesting, extracting the inner schema and appending .optional() as a chained method. The same applies to nullable()."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Superstruct have an equivalent to Zod's discriminatedUnion?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Superstruct does not have a discriminatedUnion equivalent. Superstruct's union() checks each variant in order, while Zod's discriminatedUnion() uses a discriminator key for efficient matching. When migrating union types, SchemaShift converts to z.union() by default. You can manually upgrade to z.discriminatedUnion() if your schemas have a common discriminator field."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="docs.html">Docs</a>
+        <span>&rsaquo;</span>
+        Migrate Superstruct to Zod
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate Superstruct to Zod</h1>
+        <p>
+          Convert Superstruct&rsquo;s bare-function API to Zod&rsquo;s namespaced method chains.
+          Gain access to Zod&rsquo;s richer validation features, discriminated unions, branded types,
+          and the largest TypeScript schema validation ecosystem.
+        </p>
+      </div>
+
+      <h2>Quick Start</h2>
+      <p>Install SchemaShift globally and run the migration:</p>
+      <pre><code><span class="cmd">npm install -g schemashift-cli</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f superstruct -t zod</span></code></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Pro+ Required</div>
+        <p>Superstruct &rarr; Zod migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (Superstruct)</div>
+          <pre><code><span class="comment">import</span> {
+  object, string, number, integer, boolean,
+  array, enums, optional, nullable, literal,
+  union, type Infer
+} <span class="comment">from</span> <span class="string">'superstruct'</span>;
+
+<span class="comment">const</span> UserSchema = object({
+  name: string(),
+  email: string(),
+  age: optional(integer()),
+  role: enums([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]),
+  tags: array(string()),
+  bio: nullable(string()),
+  active: boolean(),
+  status: literal(<span class="string">'active'</span>),
+  score: union([number(), literal(<span class="string">'N/A'</span>)]),
+});
+
+type User = Infer&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (Zod)</div>
+          <pre><code><span class="comment">import</span> { z } <span class="comment">from</span> <span class="string">'zod'</span>;
+
+<span class="comment">const</span> UserSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  age: z.number().int().optional(),
+  role: z.enum([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]),
+  tags: z.array(z.string()),
+  bio: z.string().nullable(),
+  active: z.boolean(),
+  status: z.literal(<span class="string">'active'</span>),
+  score: z.union([z.number(), z.literal(<span class="string">'N/A'</span>)]),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+      </div>
+
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Superstruct</th>
+            <th>Zod</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>object({...})</code></td>
+            <td><code>z.object({...})</code></td>
+            <td>Bare function &rarr; namespaced method</td>
+          </tr>
+          <tr>
+            <td><code>string()</code></td>
+            <td><code>z.string()</code></td>
+            <td>Bare function &rarr; namespaced method</td>
+          </tr>
+          <tr>
+            <td><code>number()</code></td>
+            <td><code>z.number()</code></td>
+            <td>Bare function &rarr; namespaced method</td>
+          </tr>
+          <tr>
+            <td><code>boolean()</code></td>
+            <td><code>z.boolean()</code></td>
+            <td>Bare function &rarr; namespaced method</td>
+          </tr>
+          <tr>
+            <td><code>integer()</code></td>
+            <td><code>z.number().int()</code></td>
+            <td>Separate type in Superstruct; constraint in Zod</td>
+          </tr>
+          <tr>
+            <td><code>optional(schema)</code></td>
+            <td><code>schema.optional()</code></td>
+            <td>Wrapper function &rarr; chained method</td>
+          </tr>
+          <tr>
+            <td><code>nullable(schema)</code></td>
+            <td><code>schema.nullable()</code></td>
+            <td>Wrapper function &rarr; chained method</td>
+          </tr>
+          <tr>
+            <td><code>enums(['a', 'b'])</code></td>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td>Direct mapping with name change</td>
+          </tr>
+          <tr>
+            <td><code>literal('val')</code></td>
+            <td><code>z.literal('val')</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>union([a, b])</code></td>
+            <td><code>z.union([a, b])</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>array(string())</code></td>
+            <td><code>z.array(z.string())</code></td>
+            <td>Nested bare functions &rarr; namespaced</td>
+          </tr>
+          <tr>
+            <td><code>record(string(), number())</code></td>
+            <td><code>z.record(z.string(), z.number())</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>tuple([string(), number()])</code></td>
+            <td><code>z.tuple([z.string(), z.number()])</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>Infer&lt;typeof S&gt;</code></td>
+            <td><code>z.infer&lt;typeof S&gt;</code></td>
+            <td>Type helper rewritten automatically</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>Bare function &rarr; namespaced API:</strong>
+          Superstruct imports individual functions (<code>import { string, number } from 'superstruct'</code>)
+          while Zod uses a single namespace (<code>import { z } from 'zod'</code>). SchemaShift rewrites
+          all import statements and prepends <code>z.</code> to every schema constructor. If you have
+          variables named <code>string</code> or <code>number</code> in scope, they will not conflict
+          after migration since Zod uses the <code>z.</code> prefix.
+        </li>
+        <li>
+          <strong>coerce() &rarr; .transform():</strong>
+          Superstruct&rsquo;s <code>coerce(schema, otherSchema, fn)</code> takes a source type and
+          transform function. Zod uses <code>z.preprocess(fn, schema)</code> or <code>.transform(fn)</code>
+          depending on the use case. SchemaShift maps to <code>.transform()</code> with a TODO comment
+          for complex coercion logic that may need <code>z.preprocess()</code>.
+        </li>
+        <li>
+          <strong>define() &rarr; .refine():</strong>
+          Superstruct&rsquo;s <code>define('name', fn)</code> creates custom validators by name.
+          Zod uses <code>.refine(fn, message)</code> for the same purpose but without named validators.
+          The validator name is preserved as the error message. Complex <code>define()</code> validators
+          with custom error objects need manual adjustment.
+        </li>
+        <li>
+          <strong>No discriminatedUnion in Superstruct:</strong>
+          Superstruct&rsquo;s <code>union()</code> checks each variant sequentially. Zod offers both
+          <code>z.union()</code> (sequential) and <code>z.discriminatedUnion()</code> (key-based).
+          SchemaShift converts to <code>z.union()</code> by default. You can manually upgrade to
+          <code>z.discriminatedUnion()</code> if your schemas share a discriminator field for better
+          performance and error messages.
+        </li>
+        <li>
+          <strong>size() and pattern() constraints:</strong>
+          Superstruct provides <code>size(schema, min, max)</code> and <code>pattern(schema, regex)</code>
+          as separate wrapper functions. Zod uses chained methods like <code>.min()</code>, <code>.max()</code>,
+          and <code>.regex()</code>. SchemaShift unwraps these wrappers and chains the equivalent Zod methods.
+        </li>
+      </ul>
+
+      <h2>Automated Migration</h2>
+      <p>Run the full migration with dry-run first to preview changes:</p>
+      <pre><code><span class="comment"># Preview changes without modifying files</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f superstruct -t zod --dry-run</span>
+
+<span class="comment"># Run the actual migration</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f superstruct -t zod</span>
+
+<span class="comment"># Export a diff for code review</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f superstruct -t zod --dry-run --output-diff changes.patch</span>
+
+<span class="comment"># Verbose with HTML report</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f superstruct -t zod -v --report html</span></code></pre>
+
+      <h2>Post-Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Run <code>npm install zod</code> and <code>npm uninstall superstruct</code> (after verifying)</li>
+        <li>Search for <code>TODO(schemashift)</code> comments and resolve manually</li>
+        <li>Verify <code>optional()</code> and <code>nullable()</code> wrappers were correctly inverted to chains</li>
+        <li>Check <code>coerce()</code> conversions for correct transform logic</li>
+        <li>Review <code>define()</code> &rarr; <code>.refine()</code> conversions for error handling</li>
+        <li>Consider upgrading <code>z.union()</code> to <code>z.discriminatedUnion()</code> where applicable</li>
+        <li>Verify <code>integer()</code> &rarr; <code>z.number().int()</code> preserves validation behavior</li>
+        <li>Run <code>npx tsc --noEmit</code> to verify TypeScript compilation</li>
+        <li>Run your test suite to confirm validation behavior is unchanged</li>
+      </ul>
+
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>How do Superstruct bare functions map to Zod namespaced methods?</h3>
+          <p>
+            Superstruct uses bare function imports like <code>string()</code>, <code>number()</code>,
+            <code>object()</code> while Zod uses namespaced methods like <code>z.string()</code>,
+            <code>z.number()</code>, <code>z.object()</code>. SchemaShift automatically adds the
+            <code>z.</code> namespace prefix to all schema constructors during migration. Import
+            statements are rewritten from <code>import { string, number } from 'superstruct'</code>
+            to <code>import { z } from 'zod'</code>.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>How does Superstruct&rsquo;s optional() wrapper convert to Zod?</h3>
+          <p>
+            Superstruct wraps schemas with <code>optional(string())</code> while Zod chains
+            <code>.optional()</code> as a method: <code>z.string().optional()</code>. SchemaShift
+            automatically inverts the nesting, extracting the inner schema and appending
+            <code>.optional()</code> as a chained method. The same applies to <code>nullable()</code>.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does Superstruct have an equivalent to Zod&rsquo;s discriminatedUnion?</h3>
+          <p>
+            No. Superstruct does not have a <code>discriminatedUnion</code> equivalent.
+            Superstruct&rsquo;s <code>union()</code> checks each variant in order, while Zod&rsquo;s
+            <code>discriminatedUnion()</code> uses a discriminator key for efficient matching.
+            When migrating union types, SchemaShift converts to <code>z.union()</code> by default.
+            You can manually upgrade to <code>z.discriminatedUnion()</code> if your schemas have a
+            common discriminator field.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-zod-to-superstruct.html">
+          <strong>Zod &rarr; Superstruct</strong>
+          <span>The reverse migration from Zod to Superstruct</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>TypeScript Schema Comparison</strong>
+          <span>Compare all schema libraries side by side</span>
+        </a>
+        <a href="migrate-arktype-to-zod.html">
+          <strong>ArkType &rarr; Zod</strong>
+          <span>Another migration path to consolidate on Zod</span>
+        </a>
+      </div>
+
+      <div class="callout callout-success" style="margin-top: 3rem; text-align: center;">
+        <div class="callout-title">Ready to migrate?</div>
+        <p style="margin-bottom: 1rem;">Convert your Superstruct schemas to Zod automatically with SchemaShift.</p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem;">
+          <a href="index.html">Home</a> &middot;
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convert Zod to Yup - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Step-by-step guide to convert Zod schemas to Yup. Covers z.object, z.string, z.enum, .refine to .test, type helpers, and edge cases with automated CLI migration."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-zod-to-yup.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-zod-to-yup.html" />
+    <meta property="og:title" content="Convert Zod to Yup - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Step-by-step guide to convert Zod schemas to Yup. Covers z.object, z.string, z.enum, .refine to .test, type helpers, and edge cases with automated CLI migration." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Convert Zod to Yup - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Step-by-step guide to convert Zod schemas to Yup. Covers z.object, z.string, z.enum, .refine to .test, type helpers, and edge cases with automated CLI migration." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I convert Zod schemas back to Yup automatically?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. SchemaShift supports backward migration from Zod to Yup using AST-based transformations. Run 'schemashift migrate ./src -f zod -t yup' to convert z.object, z.string, z.enum, .refine, and other Zod patterns to their Yup equivalents. This requires a Pro or Team license."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Zod features cannot be automatically converted to Yup?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "z.discriminatedUnion requires manual refactoring since Yup has no direct equivalent. z.record maps to yup.object with limited key typing. z.tuple converts to yup.array but loses per-element type safety. z.branded types have no Yup equivalent. These patterns receive TODO comments with guidance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Yup auto-coerce values differently than Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Yup auto-coerces by default (e.g., yup.number() will coerce '42' to 42), while Zod requires explicit z.coerce.number(). After migrating from Zod to Yup, your schemas may accept inputs that were previously rejected. SchemaShift warns about this behavioral difference during migration."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="docs.html">Docs</a>
+        <span>&rsaquo;</span>
+        Convert Zod to Yup
+      </nav>
+
+      <div class="guide-header">
+        <h1>Convert Zod to Yup</h1>
+        <p>
+          Migrate Zod schemas back to Yup for legacy codebase integration, team familiarity
+          with Yup&rsquo;s API, or ecosystem requirements where Yup is the established standard.
+          SchemaShift handles the AST-based transformation automatically.
+        </p>
+      </div>
+
+      <h2>Quick Start</h2>
+      <p>Install SchemaShift globally and run the migration with a single command:</p>
+      <pre><code><span class="cmd">npm install -g schemashift-cli</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f zod -t yup</span></code></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Pro+ Required</div>
+        <p>Backward migrations (Zod &rarr; Yup) require a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (Zod)</div>
+          <pre><code><span class="comment">import</span> { z } <span class="comment">from</span> <span class="string">'zod'</span>;
+
+<span class="comment">const</span> UserSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  age: z.number().int().min(0).optional(),
+  role: z.enum([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]),
+  status: z.literal(<span class="string">'active'</span>),
+  bio: z.string().nullable(),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (Yup)</div>
+          <pre><code><span class="comment">import</span> * as yup <span class="comment">from</span> <span class="string">'yup'</span>;
+
+<span class="comment">const</span> UserSchema = yup.object({
+  name: yup.string().required().min(2).max(100),
+  email: yup.string().required().email(),
+  age: yup.number().integer().min(0).notRequired(),
+  role: yup.mixed().oneOf([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]).required(),
+  status: yup.mixed().oneOf([<span class="string">'active'</span>]).required(),
+  bio: yup.string().nullable().required(),
+});
+
+type User = yup.InferType&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+      </div>
+
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Zod</th>
+            <th>Yup</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>z.object({...})</code></td>
+            <td><code>yup.object({...})</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>z.string()</code></td>
+            <td><code>yup.string().required()</code></td>
+            <td>Zod is required by default; Yup needs explicit <code>.required()</code></td>
+          </tr>
+          <tr>
+            <td><code>z.number()</code></td>
+            <td><code>yup.number().required()</code></td>
+            <td>Same required semantics difference</td>
+          </tr>
+          <tr>
+            <td><code>z.boolean()</code></td>
+            <td><code>yup.boolean().required()</code></td>
+            <td>Same required semantics difference</td>
+          </tr>
+          <tr>
+            <td><code>.optional()</code></td>
+            <td><code>.notRequired()</code></td>
+            <td>Yup uses <code>.notRequired()</code> instead of <code>.optional()</code></td>
+          </tr>
+          <tr>
+            <td><code>.nullable()</code></td>
+            <td><code>.nullable()</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>.refine(fn, msg)</code></td>
+            <td><code>.test(name, msg, fn)</code></td>
+            <td>Different argument order; Yup requires a test name</td>
+          </tr>
+          <tr>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td><code>yup.mixed().oneOf(['a', 'b'])</code></td>
+            <td>Yup has no native enum; uses <code>.oneOf()</code></td>
+          </tr>
+          <tr>
+            <td><code>z.literal('val')</code></td>
+            <td><code>yup.mixed().oneOf(['val'])</code></td>
+            <td>Expressed as single-value <code>.oneOf()</code></td>
+          </tr>
+          <tr>
+            <td><code>z.union([a, b])</code></td>
+            <td><code>yup.mixed().oneOf([...])</code></td>
+            <td>Limited; works for literal unions only</td>
+          </tr>
+          <tr>
+            <td><code>z.array(z.string())</code></td>
+            <td><code>yup.array().of(yup.string())</code></td>
+            <td>Direct mapping with <code>.of()</code></td>
+          </tr>
+          <tr>
+            <td><code>z.infer&lt;typeof S&gt;</code></td>
+            <td><code>yup.InferType&lt;typeof S&gt;</code></td>
+            <td>Type helper rewritten automatically</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>z.record() &rarr; yup.object() (limited):</strong>
+          Zod&rsquo;s <code>z.record(z.string(), z.number())</code> allows arbitrary keys with typed values.
+          Yup has no direct record equivalent. SchemaShift converts to <code>yup.object()</code> with a
+          TODO comment noting the limitation. You may need <code>yup.lazy()</code> for dynamic keys.
+        </li>
+        <li>
+          <strong>z.tuple() &rarr; yup.array() (limited):</strong>
+          Zod tuples enforce per-element types (e.g., <code>z.tuple([z.string(), z.number()])</code>).
+          Yup arrays cannot enforce different types per index. The migration converts to
+          <code>yup.array()</code> with a TODO noting the lost type granularity.
+        </li>
+        <li>
+          <strong>z.discriminatedUnion() needs manual refactoring:</strong>
+          Yup has no discriminated union. SchemaShift emits the schema with a
+          <code>/* TODO(schemashift): ... */</code> comment. Use <code>yup.lazy()</code> with a
+          switch on the discriminator field as the manual replacement.
+        </li>
+        <li>
+          <strong>.superRefine() &rarr; .test() with different API:</strong>
+          Zod&rsquo;s <code>.superRefine()</code> receives a context with <code>ctx.addIssue()</code>.
+          Yup&rsquo;s <code>.test()</code> returns <code>true</code>/<code>false</code> or
+          <code>this.createError()</code>. Complex refinements need manual adjustment of error reporting logic.
+        </li>
+        <li>
+          <strong>Yup auto-coerces (behavioral difference):</strong>
+          Yup automatically coerces values by default &mdash; <code>yup.number()</code> will accept
+          <code>"42"</code> and coerce it to <code>42</code>. Zod does not coerce unless you use
+          <code>z.coerce</code>. After migration, your schemas may accept inputs that Zod previously rejected.
+          Add <code>.strict()</code> in Yup to disable coercion if needed.
+        </li>
+      </ul>
+
+      <h2>Automated Migration</h2>
+      <p>Run the full migration with dry-run first to preview changes:</p>
+      <pre><code><span class="comment"># Preview changes without modifying files</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f zod -t yup --dry-run</span>
+
+<span class="comment"># Run the actual migration</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f zod -t yup</span>
+
+<span class="comment"># Export a diff for code review</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f zod -t yup --dry-run --output-diff changes.patch</span>
+
+<span class="comment"># Verbose output with HTML report</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f zod -t yup -v --report html</span></code></pre>
+
+      <h2>Post-Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Run <code>npm install yup</code> if not already installed</li>
+        <li>Search for <code>TODO(schemashift)</code> comments and resolve manually</li>
+        <li>Update form resolvers: <code>zodResolver</code> &rarr; <code>yupResolver</code></li>
+        <li>Test schemas that relied on Zod&rsquo;s strict (non-coercing) parsing</li>
+        <li>Verify <code>.refine()</code> &rarr; <code>.test()</code> conversions return correct error messages</li>
+        <li>Check <code>z.discriminatedUnion</code> TODO comments and implement <code>yup.lazy()</code> replacements</li>
+        <li>Run <code>npx tsc --noEmit</code> to verify TypeScript compilation</li>
+        <li>Run your test suite to confirm validation behavior is unchanged</li>
+        <li>Consider adding <code>.strict()</code> to Yup schemas if coercion is unwanted</li>
+      </ul>
+
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>Can I convert Zod schemas back to Yup automatically?</h3>
+          <p>
+            Yes. SchemaShift supports backward migration from Zod to Yup using AST-based transformations.
+            Run <code>schemashift migrate ./src -f zod -t yup</code> to convert <code>z.object</code>,
+            <code>z.string</code>, <code>z.enum</code>, <code>.refine</code>, and other Zod patterns to
+            their Yup equivalents. This requires a Pro or Team license.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What Zod features cannot be automatically converted to Yup?</h3>
+          <p>
+            <code>z.discriminatedUnion</code> requires manual refactoring since Yup has no direct equivalent.
+            <code>z.record</code> maps to <code>yup.object</code> with limited key typing.
+            <code>z.tuple</code> converts to <code>yup.array</code> but loses per-element type safety.
+            <code>z.branded</code> types have no Yup equivalent. These patterns receive TODO comments with guidance.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does Yup auto-coerce values differently than Zod?</h3>
+          <p>
+            Yes. Yup auto-coerces by default (e.g., <code>yup.number()</code> will coerce <code>"42"</code>
+            to <code>42</code>), while Zod requires explicit <code>z.coerce.number()</code>. After migrating
+            from Zod to Yup, your schemas may accept inputs that were previously rejected. SchemaShift warns
+            about this behavioral difference during migration.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup &rarr; Zod</strong>
+          <span>The forward migration path from Yup to Zod</span>
+        </a>
+        <a href="react-hook-form-migration.html">
+          <strong>React Hook Form Migration</strong>
+          <span>Update form resolvers when switching schema libraries</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod &rarr; Valibot</strong>
+          <span>Migrate Zod to Valibot for smaller bundle size</span>
+        </a>
+      </div>
+
+      <div class="callout callout-success" style="margin-top: 3rem; text-align: center;">
+        <div class="callout-title">Ready to migrate?</div>
+        <p style="margin-bottom: 1rem;">Convert your Zod schemas to Yup automatically with SchemaShift.</p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem;">
+          <a href="index.html">Home</a> &middot;
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

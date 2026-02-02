@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convert Zod to Valibot - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Step-by-step guide to convert Zod schemas to Valibot. Learn the pipe() paradigm shift, convert z.object to v.object, handle .refine() to v.check(), and migrate z.infer to v.InferOutput."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-zod-to-valibot.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-zod-to-valibot.html" />
+    <meta property="og:title" content="Convert Zod to Valibot - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Step-by-step guide to convert Zod schemas to Valibot. Learn the pipe() paradigm shift and convert fluent chains to Valibot's functional API." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Convert Zod to Valibot - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Step-by-step guide to convert Zod schemas to Valibot. Learn the pipe() paradigm shift and convert fluent chains to Valibot's functional API." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why migrate from Zod to Valibot?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Valibot offers significantly smaller bundle sizes through tree-shakeable functional design. While Zod is around 13kB minified+gzipped, Valibot schemas only include the functions you actually use, often resulting in under 1kB for typical schemas. This makes it ideal for frontend applications where bundle size matters."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is Valibot's pipe() and how does it differ from Zod chaining?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Zod uses method chaining: z.string().email().min(1). Valibot uses a pipe() function that wraps the base type and validations: v.pipe(v.string(), v.email(), v.minLength(1)). This functional approach enables better tree-shaking since unused validation functions are not bundled."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Valibot support discriminatedUnion like Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, Valibot has v.variant() which serves the same purpose as z.discriminatedUnion(). The syntax differs: z.discriminatedUnion('type', [...]) becomes v.variant('type', [...]) in Valibot. SchemaShift handles this conversion automatically."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="index.html#guides">Migration Guides</a>
+        <span>&rsaquo;</span>
+        Zod to Valibot
+      </nav>
+
+      <div class="guide-header">
+        <h1>Convert Zod to Valibot</h1>
+        <p>
+          A complete guide to converting Zod schemas to Valibot. Understand the paradigm shift from
+          method chaining to <code>pipe()</code>-based composition, reduce your bundle size, and
+          migrate <code>z.infer</code> to <code>v.InferOutput</code>.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>Convert your Zod schemas to Valibot automatically:</p>
+      <pre><code><span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to valibot</span></code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Pro Feature</div>
+        <p>Zod to Valibot migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">BEFORE &mdash; Zod</div>
+          <pre><code><span class="comment">// schemas/product.ts</span>
+import { z } from 'zod';
+
+const ProductSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  price: z.number().positive(),
+  email: z.string().email(),
+  status: z.enum(['active', 'draft', 'archived']),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+type Product = z.infer&lt;typeof ProductSchema&gt;;
+
+const CategorySchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('physical'), weight: z.number() }),
+  z.object({ type: z.literal('digital'), url: z.string().url() }),
+]);
+
+const ValidProduct = ProductSchema.refine(
+  (p) =&gt; p.price &gt; 0,
+  { message: 'Price must be positive' }
+);</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">AFTER &mdash; Valibot</div>
+          <pre><code><span class="comment">// schemas/product.ts</span>
+import * as v from 'valibot';
+
+const ProductSchema = v.object({
+  id: v.pipe(v.string(), v.uuid()),
+  name: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
+  price: v.pipe(v.number(), v.minValue(0, 'Must be positive')),
+  email: v.pipe(v.string(), v.email()),
+  status: v.picklist(['active', 'draft', 'archived']),
+  tags: v.optional(v.array(v.string())),
+  metadata: v.record(v.string(), v.unknown()),
+});
+
+type Product = v.InferOutput&lt;typeof ProductSchema&gt;;
+
+const CategorySchema = v.variant('type', [
+  v.object({ type: v.literal('physical'), weight: v.number() }),
+  v.object({ type: v.literal('digital'), url: v.pipe(v.string(), v.url()) }),
+]);
+
+const ValidProduct = v.pipe(
+  ProductSchema,
+  v.check((p) =&gt; p.price &gt; 0, 'Price must be positive')
+);</code></pre>
+        </div>
+      </div>
+
+      <!-- Conversion Table -->
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Zod</th>
+            <th>Valibot</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>z.string()</code></td>
+            <td><code>v.string()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.number()</code></td>
+            <td><code>v.number()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.boolean()</code></td>
+            <td><code>v.boolean()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.object({ ... })</code></td>
+            <td><code>v.object({ ... })</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.array(X)</code></td>
+            <td><code>v.array(X)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.string().email()</code></td>
+            <td><code>v.pipe(v.string(), v.email())</code></td>
+            <td>Validations wrap in pipe()</td>
+          </tr>
+          <tr>
+            <td><code>z.string().min(N)</code></td>
+            <td><code>v.pipe(v.string(), v.minLength(N))</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.string().max(N)</code></td>
+            <td><code>v.pipe(v.string(), v.maxLength(N))</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.number().min(N)</code></td>
+            <td><code>v.pipe(v.number(), v.minValue(N))</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.number().int()</code></td>
+            <td><code>v.pipe(v.number(), v.integer())</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>.optional()</code></td>
+            <td><code>v.optional(schema)</code></td>
+            <td>Wrapping function, not method</td>
+          </tr>
+          <tr>
+            <td><code>.nullable()</code></td>
+            <td><code>v.nullable(schema)</code></td>
+            <td>Wrapping function, not method</td>
+          </tr>
+          <tr>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td><code>v.picklist(['a', 'b'])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.union([A, B])</code></td>
+            <td><code>v.union([A, B])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.discriminatedUnion('k', [...])</code></td>
+            <td><code>v.variant('k', [...])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.literal('x')</code></td>
+            <td><code>v.literal('x')</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.record(K, V)</code></td>
+            <td><code>v.record(K, V)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>z.tuple([A, B])</code></td>
+            <td><code>v.tuple([A, B])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>.refine(fn, msg)</code></td>
+            <td><code>v.check(fn, msg)</code></td>
+            <td>Used inside v.pipe()</td>
+          </tr>
+          <tr>
+            <td><code>.transform(fn)</code></td>
+            <td><code>v.transform(fn)</code></td>
+            <td>Used inside v.pipe()</td>
+          </tr>
+          <tr>
+            <td><code>z.infer&lt;typeof X&gt;</code></td>
+            <td><code>v.InferOutput&lt;typeof X&gt;</code></td>
+            <td>Type inference helper</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>pipe() paradigm shift:</strong>
+          The biggest difference is that Valibot uses <code>v.pipe(base, validation1, validation2)</code> instead of
+          method chaining. Every Zod chain like <code>z.string().email().min(1)</code> becomes
+          <code>v.pipe(v.string(), v.email(), v.minLength(1))</code>. This is the most common source of migration errors.
+        </li>
+        <li>
+          <strong>.superRefine() needs manual conversion:</strong>
+          Zod's <code>.superRefine()</code> with <code>ctx.addIssue()</code> has no direct Valibot equivalent.
+          Simple cases can use <code>v.check()</code>, but complex multi-issue refinements need manual rewriting
+          with Valibot's <code>v.forward()</code> and custom actions. SchemaShift adds TODO comments for these.
+        </li>
+        <li>
+          <strong>.catchall() has no equivalent:</strong>
+          Zod's <code>z.object({}).catchall(z.string())</code> allows extra keys matching a schema. Valibot
+          does not support this pattern. Use <code>v.record()</code> alongside the object schema or restructure
+          your data model.
+        </li>
+        <li>
+          <strong>.describe() is removed:</strong>
+          Zod's <code>.describe('...')</code> for documentation metadata does not exist in Valibot.
+          Schema descriptions are dropped during migration. If you use descriptions for OpenAPI generation,
+          you will need an alternative approach.
+        </li>
+        <li>
+          <strong>optional() and nullable() wrapping:</strong>
+          In Zod, these are methods: <code>z.string().optional()</code>. In Valibot, they are wrapper functions:
+          <code>v.optional(v.string())</code>. This inversion affects how you compose schemas and is a common
+          mistake during manual migration.
+        </li>
+      </ul>
+
+      <!-- Automated Command -->
+      <h2>Automated Migration with SchemaShift</h2>
+      <pre><code><span class="comment"># Preview changes before migrating</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to valibot --dry-run</span>
+
+<span class="comment"># Run the migration</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to valibot</span>
+
+<span class="comment"># Estimate bundle size impact</span>
+<span class="cmd">npx schemashift-cli analyze</span> <span class="string">./src</span> <span class="flag">--bundle zod:valibot</span>
+
+<span class="comment"># Migrate with cross-file resolution</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from zod --to valibot --cross-file</span></code></pre>
+
+      <!-- Manual Checklist -->
+      <h2>Manual Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Replace <code>import { z } from 'zod'</code> with <code>import * as v from 'valibot'</code></li>
+        <li>Convert all <code>z.object({})</code> calls to <code>v.object({})</code></li>
+        <li>Wrap validation chains in <code>v.pipe()</code></li>
+        <li>Convert <code>.optional()</code> to <code>v.optional(schema)</code></li>
+        <li>Convert <code>.nullable()</code> to <code>v.nullable(schema)</code></li>
+        <li>Replace <code>z.enum([])</code> with <code>v.picklist([])</code></li>
+        <li>Replace <code>z.discriminatedUnion()</code> with <code>v.variant()</code></li>
+        <li>Convert <code>.refine()</code> to <code>v.check()</code> inside <code>v.pipe()</code></li>
+        <li>Convert <code>.transform()</code> to <code>v.transform()</code> inside <code>v.pipe()</code></li>
+        <li>Replace <code>z.infer&lt;typeof X&gt;</code> with <code>v.InferOutput&lt;typeof X&gt;</code></li>
+        <li>Remove any <code>.describe()</code> calls (no Valibot equivalent)</li>
+        <li>Handle <code>.superRefine()</code> patterns manually</li>
+        <li>Update <code>@hookform/resolvers</code> from <code>zodResolver</code> to <code>valibotResolver</code></li>
+        <li>Update <code>package.json</code>: add <code>valibot</code>, remove <code>zod</code></li>
+        <li>Run your test suite to verify behavior</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>Why migrate from Zod to Valibot?</h3>
+          <p>
+            Valibot offers significantly smaller bundle sizes through its tree-shakeable functional design.
+            While Zod is around 13kB minified+gzipped, Valibot schemas only include the functions you actually
+            use, often resulting in under 1kB for typical schemas. This makes it ideal for frontend applications
+            where bundle size matters.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What is Valibot's pipe() and how does it differ from Zod chaining?</h3>
+          <p>
+            Zod uses method chaining: <code>z.string().email().min(1)</code>. Valibot uses a <code>pipe()</code>
+            function that wraps the base type and validations: <code>v.pipe(v.string(), v.email(), v.minLength(1))</code>.
+            This functional approach enables better tree-shaking since unused validation functions are not bundled.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does Valibot support discriminatedUnion like Zod?</h3>
+          <p>
+            Yes, Valibot has <code>v.variant()</code> which serves the same purpose as <code>z.discriminatedUnion()</code>.
+            The syntax differs: <code>z.discriminatedUnion('type', [...])</code> becomes
+            <code>v.variant('type', [...])</code>. SchemaShift handles this conversion automatically.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-valibot-to-zod.html">
+          <strong>Valibot to Zod</strong>
+          <span>Going the other direction? Migrate Valibot schemas back to Zod.</span>
+        </a>
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 to v4</strong>
+          <span>Upgrade Zod to the latest version before or instead of migrating to Valibot.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>Schema Library Comparison</strong>
+          <span>Compare bundle sizes, features, and performance across all schema libraries.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <div class="callout callout-success" style="text-align: center; margin: 3rem 0;">
+        <div class="callout-title">Ready to shrink your bundle?</div>
+        <p style="margin-bottom: 1rem;">
+          SchemaShift automates Zod to Valibot conversion with pipe() wrapping, import rewriting, and resolver migration.
+        </p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

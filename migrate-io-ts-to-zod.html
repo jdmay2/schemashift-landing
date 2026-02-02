@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate io-ts to Zod - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to migrate io-ts codecs to Zod schemas. Convert t.type, t.string, t.TypeOf and fp-ts patterns to Zod equivalents with automated AST transformations."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-io-ts-to-zod.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-io-ts-to-zod.html" />
+    <meta property="og:title" content="Migrate io-ts to Zod - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to migrate io-ts codecs to Zod schemas. Convert t.type, t.string, t.TypeOf and fp-ts patterns to Zod equivalents with automated AST transformations." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate io-ts to Zod - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to migrate io-ts codecs to Zod schemas. Convert t.type, t.string, t.TypeOf and fp-ts patterns to Zod equivalents." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I handle io-ts Either monads when migrating to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "io-ts decode() returns an fp-ts Either (Left for errors, Right for success). Zod uses safeParse() which returns { success: boolean, data?, error? }. Replace pipe(codec.decode(input), fold(...)) with const result = schema.safeParse(input); if (result.success) { /* use result.data */ } else { /* handle result.error */ }."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I migrate io-ts branded types to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. io-ts branded types like t.brand(t.number, (n): n is Positive => n > 0, 'Positive') map to Zod's z.number().refine(n => n > 0).brand('Positive'). SchemaShift auto-converts simple branded types and adds TODO comments for complex custom brands."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens to fp-ts pipe imports during migration?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "SchemaShift removes fp-ts pipe imports that are only used for io-ts codec decoding. If pipe is used elsewhere in your code (e.g., for other fp-ts operations), it is preserved. The tool analyzes usage to determine which imports can be safely removed."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="index.html#guides">Migration Guides</a>
+        <span>&rsaquo;</span>
+        io-ts to Zod
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate io-ts to Zod</h1>
+        <p>
+          A comprehensive guide to converting io-ts codecs to Zod schemas. Learn how to replace
+          <code>t.type</code>, <code>t.string</code>, and <code>t.TypeOf</code> with their Zod equivalents,
+          handle fp-ts Either patterns, and remove functional programming boilerplate.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>Migrate your entire project with a single command:</p>
+      <pre><code><span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to zod</span></code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Pro Feature</div>
+        <p>io-ts to Zod migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">BEFORE &mdash; io-ts</div>
+          <pre><code><span class="comment">// schemas/user.ts</span>
+import * as t from 'io-ts';
+import { pipe } from 'fp-ts/function';
+import { fold } from 'fp-ts/Either';
+
+const UserCodec = t.type({
+  id: t.number,
+  name: t.string,
+  email: t.string,
+  role: t.union([
+    t.literal('admin'),
+    t.literal('user'),
+    t.literal('guest')
+  ]),
+  tags: t.array(t.string),
+  address: t.partial({
+    street: t.string,
+    city: t.string,
+    zip: t.string,
+  }),
+});
+
+type User = t.TypeOf&lt;typeof UserCodec&gt;;
+
+<span class="comment">// Decoding with Either</span>
+const result = pipe(
+  UserCodec.decode(input),
+  fold(
+    (errors) =&gt; { throw new Error('Invalid'); },
+    (user) =&gt; user
+  )
+);</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">AFTER &mdash; Zod</div>
+          <pre><code><span class="comment">// schemas/user.ts</span>
+import { z } from 'zod';
+
+const UserSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  email: z.string(),
+  role: z.union([
+    z.literal('admin'),
+    z.literal('user'),
+    z.literal('guest')
+  ]),
+  tags: z.array(z.string()),
+  address: z.object({
+    street: z.string(),
+    city: z.string(),
+    zip: z.string(),
+  }).partial(),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;
+
+<span class="comment">// Parsing with safeParse</span>
+const result = UserSchema.safeParse(input);
+if (!result.success) {
+  throw new Error('Invalid');
+}
+const user = result.data;</code></pre>
+        </div>
+      </div>
+
+      <!-- Conversion Table -->
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>io-ts</th>
+            <th>Zod</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>t.string</code></td>
+            <td><code>z.string()</code></td>
+            <td>Note: Zod uses function calls</td>
+          </tr>
+          <tr>
+            <td><code>t.number</code></td>
+            <td><code>z.number()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.boolean</code></td>
+            <td><code>z.boolean()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.type({ ... })</code></td>
+            <td><code>z.object({ ... })</code></td>
+            <td>All properties required</td>
+          </tr>
+          <tr>
+            <td><code>t.partial({ ... })</code></td>
+            <td><code>z.object({ ... }).partial()</code></td>
+            <td>All properties optional</td>
+          </tr>
+          <tr>
+            <td><code>t.array(X)</code></td>
+            <td><code>z.array(X)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.union([A, B])</code></td>
+            <td><code>z.union([A, B])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.intersection([A, B])</code></td>
+            <td><code>A.merge(B)</code></td>
+            <td>For object types; use <code>.and()</code> for others</td>
+          </tr>
+          <tr>
+            <td><code>t.literal('x')</code></td>
+            <td><code>z.literal('x')</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.null</code></td>
+            <td><code>z.null()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.undefined</code></td>
+            <td><code>z.undefined()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.void</code></td>
+            <td><code>z.void()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.unknown</code></td>
+            <td><code>z.unknown()</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.record(t.string, X)</code></td>
+            <td><code>z.record(z.string(), X)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.tuple([A, B])</code></td>
+            <td><code>z.tuple([A, B])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.keyof({ a: null, b: null })</code></td>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.TypeOf&lt;typeof X&gt;</code></td>
+            <td><code>z.infer&lt;typeof X&gt;</code></td>
+            <td>Type extraction</td>
+          </tr>
+          <tr>
+            <td><code>t.OutputOf&lt;typeof X&gt;</code></td>
+            <td><code>z.infer&lt;typeof X&gt;</code></td>
+            <td>Zod has no separate output type for basic schemas</td>
+          </tr>
+          <tr>
+            <td><code>t.Int</code></td>
+            <td><code>z.number().int()</code></td>
+            <td>Branded integer becomes a refinement</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>Either monad &rarr; safeParse:</strong>
+          io-ts <code>decode()</code> returns an fp-ts <code>Either</code>. Replace <code>pipe(codec.decode(input), fold(...))</code>
+          with Zod's <code>schema.safeParse(input)</code> which returns <code>{ success, data, error }</code>.
+          You will need to refactor any code that pattern-matches on <code>Left</code>/<code>Right</code>.
+        </li>
+        <li>
+          <strong>fp-ts pipe removal:</strong>
+          If <code>pipe</code> from <code>fp-ts/function</code> is only used for codec decoding, SchemaShift removes the
+          import entirely. If used elsewhere, it is preserved. Review remaining fp-ts usage manually.
+        </li>
+        <li>
+          <strong>Branded types &rarr; z.brand():</strong>
+          io-ts <code>t.brand()</code> creates nominal types. Zod uses <code>.brand('Name')</code> for similar behavior.
+          Complex brand predicates may need manual review since Zod brands are purely type-level.
+        </li>
+        <li>
+          <strong>Codec encode/decode &rarr; parse only:</strong>
+          io-ts codecs support both encoding and decoding. Zod schemas only parse (decode). If your code uses
+          <code>codec.encode()</code>, you will need a separate serialization step. SchemaShift adds a TODO comment.
+        </li>
+        <li>
+          <strong>t.Int &rarr; z.number().int():</strong>
+          io-ts provides <code>t.Int</code> as a branded type for integers. Zod uses a refinement:
+          <code>z.number().int()</code>. The branded nominal type is lost; use <code>.brand('Int')</code> if needed.
+        </li>
+        <li>
+          <strong>Recursive codecs:</strong>
+          io-ts <code>t.recursion()</code> maps to <code>z.lazy()</code>. You must provide an explicit type annotation
+          for the Zod schema since TypeScript cannot infer recursive types: <code>const Tree: z.ZodType&lt;TreeType&gt; = z.lazy(() =&gt; ...)</code>.
+        </li>
+      </ul>
+
+      <!-- Automated Command -->
+      <h2>Automated Migration with SchemaShift</h2>
+      <pre><code><span class="comment"># Dry run first to preview changes</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to zod --dry-run</span>
+
+<span class="comment"># Run the migration</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to zod</span>
+
+<span class="comment"># With verbose output and HTML report</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to zod --verbose --report html</span>
+
+<span class="comment"># Export a unified diff for review</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to zod --dry-run --output-diff changes.patch</span></code></pre>
+
+      <!-- Manual Checklist -->
+      <h2>Manual Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Replace <code>import * as t from 'io-ts'</code> with <code>import { z } from 'zod'</code></li>
+        <li>Convert all <code>t.type({})</code> calls to <code>z.object({})</code></li>
+        <li>Convert all <code>t.partial({})</code> calls to <code>z.object({}).partial()</code></li>
+        <li>Replace <code>t.TypeOf&lt;typeof X&gt;</code> with <code>z.infer&lt;typeof X&gt;</code></li>
+        <li>Replace <code>t.Int</code> with <code>z.number().int()</code></li>
+        <li>Convert <code>t.union([])</code> to <code>z.union([])</code></li>
+        <li>Replace Either-based decoding with <code>safeParse()</code></li>
+        <li>Remove unused <code>fp-ts</code> imports</li>
+        <li>Convert <code>t.brand()</code> to <code>.brand()</code> or <code>.refine()</code></li>
+        <li>Add TODO comments for any <code>codec.encode()</code> usage</li>
+        <li>Update <code>package.json</code>: add <code>zod</code>, remove <code>io-ts</code> and <code>fp-ts</code> (if unused)</li>
+        <li>Run <code>npx tsc --noEmit</code> to verify type safety</li>
+        <li>Run your test suite to verify runtime behavior</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>How do I handle io-ts Either monads when migrating to Zod?</h3>
+          <p>
+            io-ts <code>decode()</code> returns an fp-ts <code>Either</code> (Left for errors, Right for success).
+            Zod uses <code>safeParse()</code> which returns <code>{ success: boolean, data?, error? }</code>.
+            Replace <code>pipe(codec.decode(input), fold(...))</code> with
+            <code>const result = schema.safeParse(input)</code> and check <code>result.success</code>.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Can I migrate io-ts branded types to Zod?</h3>
+          <p>
+            Yes. io-ts branded types like <code>t.brand(t.number, (n): n is Positive =&gt; n &gt; 0, 'Positive')</code>
+            map to Zod's <code>z.number().refine(n =&gt; n &gt; 0).brand('Positive')</code>. SchemaShift
+            auto-converts simple branded types and adds TODO comments for complex custom brands that need manual review.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What happens to fp-ts pipe imports during migration?</h3>
+          <p>
+            SchemaShift removes <code>fp-ts</code> pipe imports that are only used for io-ts codec decoding.
+            If <code>pipe</code> is used elsewhere in your code for other fp-ts operations, it is preserved.
+            The tool analyzes usage context to determine which imports can be safely removed.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-io-ts-to-effect.html">
+          <strong>io-ts to Effect Schema</strong>
+          <span>Stay in the fp-ts ecosystem by migrating to Effect Schema instead.</span>
+        </a>
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup to Zod</strong>
+          <span>Migrate Yup validation schemas to Zod with automatic form resolver updates.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>Schema Library Comparison</strong>
+          <span>Compare features across Zod, Yup, Joi, io-ts, Valibot, ArkType, and more.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <div class="callout callout-success" style="text-align: center; margin: 3rem 0;">
+        <div class="callout-title">Ready to migrate?</div>
+        <p style="margin-bottom: 1rem;">
+          SchemaShift automates io-ts to Zod migration with AST-based transforms, fp-ts cleanup, and inline TODO guidance.
+        </p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

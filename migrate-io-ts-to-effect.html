@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate io-ts to Effect Schema - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Step-by-step guide to migrate io-ts codecs to Effect Schema. Convert t.type to S.Struct, t.string to S.String, replace fp-ts pipe with Effect pipe, and adopt the Effect ecosystem."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-io-ts-to-effect.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-io-ts-to-effect.html" />
+    <meta property="og:title" content="Migrate io-ts to Effect Schema - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Step-by-step guide to migrate io-ts codecs to Effect Schema. Stay in the functional programming ecosystem while modernizing your validation layer." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate io-ts to Effect Schema - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Step-by-step guide to migrate io-ts codecs to Effect Schema. Stay in the functional programming ecosystem while modernizing your validation layer." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why migrate from io-ts to Effect Schema instead of Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "If your codebase already uses fp-ts patterns and functional programming, Effect Schema provides a natural upgrade path. It retains the functional paradigm with pipe-based composition, supports encode/decode (not just parse), and integrates with the broader Effect ecosystem for error handling, concurrency, and dependency injection. Choose Zod if you prefer a simpler, more mainstream API."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Effect Schema handle union types compared to io-ts?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "io-ts uses t.union([A, B]) with array syntax. Effect Schema uses S.Union() with spread arguments: S.Union(A, B) instead of S.Union([A, B]). This is a subtle but important difference. For intersections, io-ts t.intersection([A, B]) becomes pipe(A, S.extend(B)) using Effect's pipe function."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What changes for decode and encode operations?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "io-ts uses codec.decode(input) returning Either. Effect Schema uses S.decodeUnknownEither(schema)(input) or S.decodeUnknownSync(schema)(input) for synchronous parsing that throws. The encode direction uses S.encodeSync(schema)(value). Effect Schema preserves bidirectional encoding that Zod does not support."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="index.html#guides">Migration Guides</a>
+        <span>&rsaquo;</span>
+        io-ts to Effect Schema
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate io-ts to Effect Schema</h1>
+        <p>
+          A complete guide to converting io-ts codecs to Effect Schema. Stay in the functional programming
+          ecosystem while modernizing your validation layer. Convert <code>t.type</code> to
+          <code>S.Struct</code>, replace fp-ts pipe with Effect pipe, and gain access to the full
+          Effect ecosystem.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>Convert your io-ts codecs to Effect Schema:</p>
+      <pre><code><span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to effect</span></code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Pro+ Feature</div>
+        <p>io-ts to Effect Schema migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">BEFORE &mdash; io-ts</div>
+          <pre><code><span class="comment">// schemas/config.ts</span>
+import * as t from 'io-ts';
+import { pipe } from 'fp-ts/function';
+import { fold } from 'fp-ts/Either';
+
+const DatabaseConfig = t.type({
+  host: t.string,
+  port: t.number,
+  database: t.string,
+  ssl: t.boolean,
+});
+
+const AppConfig = t.type({
+  db: DatabaseConfig,
+  env: t.union([
+    t.literal('development'),
+    t.literal('staging'),
+    t.literal('production'),
+  ]),
+  features: t.array(t.string),
+  limits: t.partial({
+    maxConnections: t.number,
+    timeout: t.number,
+  }),
+});
+
+type AppConfig = t.TypeOf&lt;typeof AppConfig&gt;;
+
+const ServerConfig = t.intersection([
+  AppConfig,
+  t.type({ port: t.number }),
+]);
+
+<span class="comment">// Decoding</span>
+const parseConfig = (raw: unknown): AppConfig =&gt;
+  pipe(
+    AppConfig.decode(raw),
+    fold(
+      (errors) =&gt; { throw new Error(String(errors)); },
+      (config) =&gt; config
+    )
+  );</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">AFTER &mdash; Effect Schema</div>
+          <pre><code><span class="comment">// schemas/config.ts</span>
+import * as S from '@effect/schema/Schema';
+import { pipe } from 'effect/Function';
+
+const DatabaseConfig = S.Struct({
+  host: S.String,
+  port: S.Number,
+  database: S.String,
+  ssl: S.Boolean,
+});
+
+const AppConfig = S.Struct({
+  db: DatabaseConfig,
+  env: S.Union(
+    S.Literal('development'),
+    S.Literal('staging'),
+    S.Literal('production'),
+  ),
+  features: S.Array(S.String),
+  limits: S.partial(S.Struct({
+    maxConnections: S.Number,
+    timeout: S.Number,
+  })),
+});
+
+type AppConfig = S.Schema.Type&lt;typeof AppConfig&gt;;
+
+const ServerConfig = pipe(
+  AppConfig,
+  S.extend(S.Struct({ port: S.Number })),
+);
+
+<span class="comment">// Decoding</span>
+const parseConfig = (raw: unknown): AppConfig =&gt;
+  S.decodeUnknownSync(AppConfig)(raw);</code></pre>
+        </div>
+      </div>
+
+      <!-- Conversion Table -->
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>io-ts</th>
+            <th>Effect Schema</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>t.string</code></td>
+            <td><code>S.String</code></td>
+            <td>Capitalized, no parentheses</td>
+          </tr>
+          <tr>
+            <td><code>t.number</code></td>
+            <td><code>S.Number</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.boolean</code></td>
+            <td><code>S.Boolean</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.type({ ... })</code></td>
+            <td><code>S.Struct({ ... })</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.partial({ ... })</code></td>
+            <td><code>S.partial(S.Struct({ ... }))</code></td>
+            <td>Wrapping function</td>
+          </tr>
+          <tr>
+            <td><code>t.array(X)</code></td>
+            <td><code>S.Array(X)</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.union([A, B])</code></td>
+            <td><code>S.Union(A, B)</code></td>
+            <td>Spread args, not array</td>
+          </tr>
+          <tr>
+            <td><code>t.intersection([A, B])</code></td>
+            <td><code>pipe(A, S.extend(B))</code></td>
+            <td>Uses Effect pipe</td>
+          </tr>
+          <tr>
+            <td><code>t.literal('x')</code></td>
+            <td><code>S.Literal('x')</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.null</code></td>
+            <td><code>S.Null</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.undefined</code></td>
+            <td><code>S.Undefined</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.void</code></td>
+            <td><code>S.Void</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.unknown</code></td>
+            <td><code>S.Unknown</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.record(t.string, X)</code></td>
+            <td><code>S.Record({ key: S.String, value: X })</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.tuple([A, B])</code></td>
+            <td><code>S.Tuple(A, B)</code></td>
+            <td>Spread args, not array</td>
+          </tr>
+          <tr>
+            <td><code>t.keyof({ a: null })</code></td>
+            <td><code>S.Literal('a')</code></td>
+            <td>Or <code>S.Union(S.Literal('a'), ...)</code></td>
+          </tr>
+          <tr>
+            <td><code>t.TypeOf&lt;typeof X&gt;</code></td>
+            <td><code>S.Schema.Type&lt;typeof X&gt;</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>t.OutputOf&lt;typeof X&gt;</code></td>
+            <td><code>S.Schema.Type&lt;typeof X&gt;</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td><code>pipe (fp-ts)</code></td>
+            <td><code>pipe (effect/Function)</code></td>
+            <td>Same concept, different import</td>
+          </tr>
+          <tr>
+            <td><code>codec.decode(input)</code></td>
+            <td><code>S.decodeUnknownSync(schema)(input)</code></td>
+            <td>Throws on failure</td>
+          </tr>
+          <tr>
+            <td><code>codec.encode(value)</code></td>
+            <td><code>S.encodeSync(schema)(value)</code></td>
+            <td>Encode is preserved</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>decode/encode changes:</strong>
+          io-ts uses <code>codec.decode(input)</code> returning <code>Either</code>. Effect Schema uses
+          <code>S.decodeUnknownSync(schema)(input)</code> which throws on failure, or
+          <code>S.decodeUnknownEither(schema)(input)</code> for Either-style. Unlike Zod, Effect Schema
+          preserves bidirectional encoding via <code>S.encodeSync()</code>.
+        </li>
+        <li>
+          <strong>Branded types:</strong>
+          io-ts <code>t.brand()</code> maps to Effect Schema's <code>S.brand()</code>. The API is similar:
+          <code>pipe(S.Number, S.brand('Positive'), S.filter(n =&gt; n &gt; 0))</code>. Effect Schema
+          brands are type-level and compose well with the pipe pattern.
+        </li>
+        <li>
+          <strong>Recursive types use S.suspend():</strong>
+          io-ts <code>t.recursion('name', () =&gt; codec)</code> becomes
+          <code>S.Struct({ children: S.Array(S.suspend(() =&gt; TreeSchema)) })</code>.
+          You must provide explicit type annotations for recursive schemas in both libraries.
+        </li>
+        <li>
+          <strong>Union uses spread, not array:</strong>
+          io-ts <code>t.union([A, B, C])</code> passes an array. Effect Schema uses spread arguments:
+          <code>S.Union(A, B, C)</code>. Forgetting to remove the array brackets is a common migration error.
+        </li>
+        <li>
+          <strong>Effect ecosystem integration:</strong>
+          Effect Schema is part of the larger Effect ecosystem. After migration, you can leverage
+          <code>Effect.runPromise</code>, <code>Layer</code>, and other Effect primitives for error handling
+          and dependency injection. This is a benefit if you plan to adopt Effect more broadly.
+        </li>
+        <li>
+          <strong>fp-ts pipe &rarr; effect/Function pipe:</strong>
+          The <code>pipe</code> function works identically but comes from a different package.
+          Replace <code>import { pipe } from 'fp-ts/function'</code> with
+          <code>import { pipe } from 'effect/Function'</code>. SchemaShift handles this automatically.
+        </li>
+      </ul>
+
+      <!-- Automated Command -->
+      <h2>Automated Migration with SchemaShift</h2>
+      <pre><code><span class="comment"># Preview changes with dry run</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to effect --dry-run</span>
+
+<span class="comment"># Run the migration</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to effect</span>
+
+<span class="comment"># With verbose output and report</span>
+<span class="cmd">npx schemashift-cli migrate</span> <span class="string">./src</span> <span class="flag">--from io-ts --to effect --verbose --report html</span>
+
+<span class="comment"># Analyze behavioral differences first</span>
+<span class="cmd">npx schemashift-cli analyze</span> <span class="string">./src</span> <span class="flag">--behavioral io-ts:effect</span></code></pre>
+
+      <!-- Manual Checklist -->
+      <h2>Manual Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Replace <code>import * as t from 'io-ts'</code> with <code>import * as S from '@effect/schema/Schema'</code></li>
+        <li>Replace <code>import { pipe } from 'fp-ts/function'</code> with <code>import { pipe } from 'effect/Function'</code></li>
+        <li>Convert <code>t.type({})</code> to <code>S.Struct({})</code></li>
+        <li>Convert primitives: <code>t.string</code> &rarr; <code>S.String</code>, <code>t.number</code> &rarr; <code>S.Number</code></li>
+        <li>Convert <code>t.array(X)</code> to <code>S.Array(X)</code></li>
+        <li>Convert <code>t.union([A, B])</code> to <code>S.Union(A, B)</code> (spread, not array)</li>
+        <li>Convert <code>t.intersection([A, B])</code> to <code>pipe(A, S.extend(B))</code></li>
+        <li>Replace <code>t.TypeOf&lt;typeof X&gt;</code> with <code>S.Schema.Type&lt;typeof X&gt;</code></li>
+        <li>Convert <code>codec.decode(input)</code> to <code>S.decodeUnknownSync(schema)(input)</code></li>
+        <li>Convert <code>codec.encode(value)</code> to <code>S.encodeSync(schema)(value)</code></li>
+        <li>Replace <code>t.recursion()</code> with <code>S.suspend()</code></li>
+        <li>Convert <code>t.brand()</code> to <code>S.brand()</code></li>
+        <li>Remove unused fp-ts imports (<code>Either</code>, <code>fold</code>)</li>
+        <li>Update <code>package.json</code>: add <code>@effect/schema</code> and <code>effect</code>, remove <code>io-ts</code> and <code>fp-ts</code> (if unused)</li>
+        <li>Run <code>npx tsc --noEmit</code> to verify type safety</li>
+      </ul>
+
+      <!-- FAQ -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>Why migrate from io-ts to Effect Schema instead of Zod?</h3>
+          <p>
+            If your codebase already uses fp-ts patterns and functional programming, Effect Schema provides
+            a natural upgrade path. It retains the functional paradigm with pipe-based composition, supports
+            encode/decode (not just parse), and integrates with the broader Effect ecosystem for error handling,
+            concurrency, and dependency injection. Choose Zod if you prefer a simpler, more mainstream API.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>How does Effect Schema handle union types compared to io-ts?</h3>
+          <p>
+            io-ts uses <code>t.union([A, B])</code> with array syntax. Effect Schema uses <code>S.Union()</code>
+            with spread arguments: <code>S.Union(A, B)</code> instead of <code>S.Union([A, B])</code>. This is
+            a subtle but important difference. For intersections, io-ts <code>t.intersection([A, B])</code>
+            becomes <code>pipe(A, S.extend(B))</code> using Effect's pipe function.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What changes for decode and encode operations?</h3>
+          <p>
+            io-ts uses <code>codec.decode(input)</code> returning <code>Either</code>. Effect Schema uses
+            <code>S.decodeUnknownEither(schema)(input)</code> or <code>S.decodeUnknownSync(schema)(input)</code>
+            for synchronous parsing that throws. The encode direction uses <code>S.encodeSync(schema)(value)</code>.
+            Effect Schema preserves bidirectional encoding that Zod does not support.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-io-ts-to-zod.html">
+          <strong>io-ts to Zod</strong>
+          <span>Prefer a simpler API? Migrate io-ts codecs to Zod schemas instead.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>Schema Library Comparison</strong>
+          <span>Compare Effect Schema, io-ts, Zod, and other schema libraries side by side.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <div class="callout callout-success" style="text-align: center; margin: 3rem 0;">
+        <div class="callout-title">Ready to adopt Effect?</div>
+        <p style="margin-bottom: 1rem;">
+          SchemaShift automates io-ts to Effect Schema migration with codec conversion, fp-ts pipe rewriting, and inline guidance for complex patterns.
+        </p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

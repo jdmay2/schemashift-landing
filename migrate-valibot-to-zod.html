@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate Valibot to Zod - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to migrate Valibot schemas to Zod. Covers v.pipe() unwrapping, v.object to z.object, v.picklist to z.enum, and the wrapper-to-chain paradigm shift."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-valibot-to-zod.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-valibot-to-zod.html" />
+    <meta property="og:title" content="Migrate Valibot to Zod - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to migrate Valibot schemas to Zod. Covers v.pipe() unwrapping, v.object to z.object, v.picklist to z.enum, and the wrapper-to-chain paradigm shift." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate Valibot to Zod - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to migrate Valibot schemas to Zod. Covers v.pipe() unwrapping, v.object to z.object, v.picklist to z.enum, and the wrapper-to-chain paradigm shift." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I convert Valibot pipe() calls to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Valibot's v.pipe(v.string(), v.minLength(3), v.email()) becomes z.string().min(3).email() in Zod. SchemaShift automatically unwraps pipe() calls, extracts the base type as the first argument, and chains the remaining validation actions as Zod method calls."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why would I migrate from Valibot back to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Common reasons include ecosystem compatibility (tRPC, Drizzle, and many libraries have first-class Zod support), team familiarity with Zod's fluent API, needing discriminatedUnion or branded types, or consolidating on a single schema library across a large codebase."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SchemaShift handle Valibot's wrapper functions like v.optional()?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Valibot uses wrapper functions like v.optional(v.string()) and v.nullable(v.string()), while Zod uses chained methods like z.string().optional() and z.string().nullable(). SchemaShift automatically converts the wrapper-style syntax to Zod's chain-style syntax."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">SchemaShift</a>
+        <span>&rsaquo;</span>
+        <a href="docs.html">Docs</a>
+        <span>&rsaquo;</span>
+        Migrate Valibot to Zod
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate Valibot to Zod</h1>
+        <p>
+          Convert Valibot&rsquo;s functional pipe-based API to Zod&rsquo;s fluent method chains.
+          Whether you need broader ecosystem support, team familiarity with Zod, or first-class
+          tRPC/Drizzle integration, SchemaShift automates the transformation.
+        </p>
+      </div>
+
+      <h2>Quick Start</h2>
+      <p>Install SchemaShift globally and run the migration:</p>
+      <pre><code><span class="cmd">npm install -g schemashift-cli</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f valibot -t zod</span></code></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Pro+ Required</div>
+        <p>Valibot &rarr; Zod migration requires a Pro or Team license. <a href="index.html#pricing">View pricing</a>.</p>
+      </div>
+
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (Valibot)</div>
+          <pre><code><span class="comment">import</span> * as v <span class="comment">from</span> <span class="string">'valibot'</span>;
+
+<span class="comment">const</span> UserSchema = v.object({
+  name: v.pipe(v.string(), v.minLength(2), v.maxLength(100)),
+  email: v.pipe(v.string(), v.email()),
+  age: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+  role: v.picklist([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]),
+  tags: v.array(v.string()),
+  bio: v.nullable(v.string()),
+  score: v.pipe(
+    v.number(),
+    v.transform((n) =&gt; Math.round(n))
+  ),
+});
+
+type User = v.InferOutput&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (Zod)</div>
+          <pre><code><span class="comment">import</span> { z } <span class="comment">from</span> <span class="string">'zod'</span>;
+
+<span class="comment">const</span> UserSchema = z.object({
+  name: z.string().min(2).max(100),
+  email: z.string().email(),
+  age: z.number().int().min(0).optional(),
+  role: z.enum([<span class="string">'admin'</span>, <span class="string">'user'</span>, <span class="string">'guest'</span>]),
+  tags: z.array(z.string()),
+  bio: z.string().nullable(),
+  score: z.number().transform((n) =&gt; Math.round(n)),
+});
+
+type User = z.infer&lt;typeof UserSchema&gt;;</code></pre>
+        </div>
+      </div>
+
+      <h2>Conversion Reference</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Valibot</th>
+            <th>Zod</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>v.object({...})</code></td>
+            <td><code>z.object({...})</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.string()</code></td>
+            <td><code>z.string()</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.number()</code></td>
+            <td><code>z.number()</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.boolean()</code></td>
+            <td><code>z.boolean()</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.pipe(v.string(), v.minLength(3))</code></td>
+            <td><code>z.string().min(3)</code></td>
+            <td>Pipe unwrapped; actions become chained methods</td>
+          </tr>
+          <tr>
+            <td><code>v.pipe(v.string(), v.email())</code></td>
+            <td><code>z.string().email()</code></td>
+            <td>Pipe unwrapped; built-in validators chained</td>
+          </tr>
+          <tr>
+            <td><code>v.optional(schema)</code></td>
+            <td><code>schema.optional()</code></td>
+            <td>Wrapper &rarr; chained method</td>
+          </tr>
+          <tr>
+            <td><code>v.nullable(schema)</code></td>
+            <td><code>schema.nullable()</code></td>
+            <td>Wrapper &rarr; chained method</td>
+          </tr>
+          <tr>
+            <td><code>v.picklist(['a', 'b'])</code></td>
+            <td><code>z.enum(['a', 'b'])</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.union([a, b])</code></td>
+            <td><code>z.union([a, b])</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.check(fn, msg)</code></td>
+            <td><code>.refine(fn, msg)</code></td>
+            <td>Custom validation; argument order matches</td>
+          </tr>
+          <tr>
+            <td><code>v.transform(fn)</code></td>
+            <td><code>.transform(fn)</code></td>
+            <td>Inside pipe &rarr; chained method</td>
+          </tr>
+          <tr>
+            <td><code>v.array(v.string())</code></td>
+            <td><code>z.array(z.string())</code></td>
+            <td>Direct mapping</td>
+          </tr>
+          <tr>
+            <td><code>v.InferOutput&lt;typeof S&gt;</code></td>
+            <td><code>z.infer&lt;typeof S&gt;</code></td>
+            <td>Type helper rewritten automatically</td>
+          </tr>
+          <tr>
+            <td><code>v.InferInput&lt;typeof S&gt;</code></td>
+            <td><code>z.input&lt;typeof S&gt;</code></td>
+            <td>Input type helper rewritten</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>v.pipe() unwrapping complexity:</strong>
+          Valibot&rsquo;s <code>v.pipe()</code> can contain multiple validation actions, transforms,
+          and custom checks in a single call. SchemaShift extracts the base type from the first argument
+          and chains remaining actions. Deeply nested pipes with conditional logic may need manual review.
+        </li>
+        <li>
+          <strong>v.variant() &rarr; z.discriminatedUnion():</strong>
+          Valibot&rsquo;s <code>v.variant('type', [...])</code> maps to <code>z.discriminatedUnion('type', [...])</code>,
+          but the inner schema structure differs. Each variant branch must be a full <code>z.object()</code>
+          containing the discriminator field. SchemaShift handles simple cases; complex variants get TODO comments.
+        </li>
+        <li>
+          <strong>Wrapper &rarr; chain paradigm shift:</strong>
+          Valibot wraps schemas with functions (<code>v.optional(v.string())</code>) while Zod chains methods
+          (<code>z.string().optional()</code>). This inverts the nesting direction. SchemaShift handles
+          this automatically, but deeply nested wrappers like
+          <code>v.optional(v.nullable(v.pipe(...)))</code> may produce verbose chains.
+        </li>
+        <li>
+          <strong>Valibot tree-shakeable imports:</strong>
+          Valibot&rsquo;s functional API is tree-shakeable by design &mdash; unused validators are not bundled.
+          Zod imports the entire library. Expect a bundle size increase when migrating from Valibot to Zod.
+          Run <code>schemashift analyze --bundle valibot-to-zod</code> to estimate the impact.
+        </li>
+        <li>
+          <strong>v.fallback() vs z.catch():</strong>
+          Valibot&rsquo;s <code>v.fallback(schema, defaultValue)</code> provides a fallback on parse failure,
+          similar to Zod&rsquo;s <code>.catch(defaultValue)</code>. The wrapper-to-chain conversion applies here
+          as well. SchemaShift handles the mapping automatically.
+        </li>
+      </ul>
+
+      <h2>Automated Migration</h2>
+      <p>Run the full migration with dry-run first to preview changes:</p>
+      <pre><code><span class="comment"># Preview changes without modifying files</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f valibot -t zod --dry-run</span>
+
+<span class="comment"># Run the actual migration</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f valibot -t zod</span>
+
+<span class="comment"># Verbose with report</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f valibot -t zod -v --report html</span>
+
+<span class="comment"># Canary migration: convert 20% of files first</span>
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f valibot -t zod --canary 20</span></code></pre>
+
+      <h2>Post-Migration Checklist</h2>
+      <ul class="checklist">
+        <li>Run <code>npm install zod</code> and <code>npm uninstall valibot</code> (after verifying)</li>
+        <li>Search for <code>TODO(schemashift)</code> comments and resolve manually</li>
+        <li>Update form resolvers: <code>valibotResolver</code> &rarr; <code>zodResolver</code></li>
+        <li>Verify <code>v.pipe()</code> unwrapping produced correct method chains</li>
+        <li>Check <code>v.variant()</code> conversions to <code>z.discriminatedUnion()</code></li>
+        <li>Review bundle size impact (Valibot is tree-shakeable; Zod is not)</li>
+        <li>Run <code>npx tsc --noEmit</code> to verify TypeScript compilation</li>
+        <li>Run your test suite to confirm validation behavior is unchanged</li>
+        <li>Update any tRPC or Drizzle integrations to use Zod schemas directly</li>
+      </ul>
+
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>How do I convert Valibot pipe() calls to Zod?</h3>
+          <p>
+            Valibot&rsquo;s <code>v.pipe(v.string(), v.minLength(3), v.email())</code> becomes
+            <code>z.string().min(3).email()</code> in Zod. SchemaShift automatically unwraps
+            <code>pipe()</code> calls, extracts the base type as the first argument, and chains
+            the remaining validation actions as Zod method calls.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Why would I migrate from Valibot back to Zod?</h3>
+          <p>
+            Common reasons include ecosystem compatibility (tRPC, Drizzle, and many libraries have
+            first-class Zod support), team familiarity with Zod&rsquo;s fluent API, needing
+            <code>discriminatedUnion</code> or branded types, or consolidating on a single schema
+            library across a large codebase.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does SchemaShift handle Valibot&rsquo;s wrapper functions like v.optional()?</h3>
+          <p>
+            Yes. Valibot uses wrapper functions like <code>v.optional(v.string())</code> and
+            <code>v.nullable(v.string())</code>, while Zod uses chained methods like
+            <code>z.string().optional()</code> and <code>z.string().nullable()</code>. SchemaShift
+            automatically converts the wrapper-style syntax to Zod&rsquo;s chain-style syntax.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod &rarr; Valibot</strong>
+          <span>The forward migration from Zod to Valibot</span>
+        </a>
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 &rarr; v4</strong>
+          <span>Upgrade Zod to the latest version after migrating</span>
+        </a>
+        <a href="migrate-arktype-to-zod.html">
+          <strong>ArkType &rarr; Zod</strong>
+          <span>Another path to consolidating on Zod</span>
+        </a>
+      </div>
+
+      <div class="callout callout-success" style="margin-top: 3rem; text-align: center;">
+        <div class="callout-title">Ready to migrate?</div>
+        <p style="margin-bottom: 1rem;">Convert your Valibot schemas to Zod automatically with SchemaShift.</p>
+        <a href="index.html" class="btn btn-primary btn-inline">Get SchemaShift</a>
+      </div>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem;">
+          <a href="index.html">Home</a> &middot;
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tRPC Schema Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Migrate tRPC schemas from Zod v3 to v4, or switch to Valibot via Standard Schema. SchemaShift detects ecosystem compatibility issues and handles the migration automatically."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/trpc-schema-migration.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/trpc-schema-migration.html" />
+    <meta property="og:title" content="tRPC Schema Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Migrate tRPC schemas from Zod v3 to v4, or switch to Valibot via Standard Schema. SchemaShift detects ecosystem compatibility issues and handles the migration automatically." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="tRPC Schema Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Migrate tRPC schemas from Zod v3 to v4, or switch to Valibot via Standard Schema. SchemaShift detects ecosystem compatibility issues and handles the migration automatically." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I upgrade Zod to v4 in a tRPC project?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, but you need tRPC v11 or later. tRPC v10 uses Zod v3 types directly in its internal type system, so upgrading Zod to v4 without upgrading tRPC will cause type errors. tRPC v11 adopted Standard Schema support, making it compatible with Zod v4, Valibot, ArkType, and other conforming libraries."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does tRPC v11 work with schema libraries other than Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. tRPC v11 supports the Standard Schema specification, which means any library implementing the standard works out of the box. This includes Zod v3.23+, Zod v4, Valibot v1+, ArkType v2+, and Effect Schema. You can even use different schema libraries for different procedures in the same router."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What breaks when upgrading Zod in a tRPC project?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Common breaking changes include: trpc-openapi and trpc-ui packages that depend on Zod v3 internals, zod-validation-error needing v5.0.0+ for Zod v4, zodios HTTP client breaking with v4, and any code accessing Zod internal types like ZodType or _def. SchemaShift's ecosystem analyzer detects all of these automatically and provides upgrade commands."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        Framework Guides
+        <span>&rsaquo;</span>
+        tRPC
+      </nav>
+
+      <div class="guide-header">
+        <h1>tRPC Schema Migration</h1>
+        <p>
+          tRPC uses schema validation libraries to type-check procedure inputs and outputs. With
+          tRPC v11's adoption of Standard Schema, you are no longer locked into Zod &mdash; but
+          upgrading from Zod v3 to v4 or switching libraries requires careful attention to
+          ecosystem compatibility. SchemaShift automates the migration and detects breaking
+          dependencies.
+        </p>
+      </div>
+
+      <h2>Migration Paths</h2>
+      <p>
+        There are two common migration scenarios for tRPC projects:
+      </p>
+      <ul>
+        <li><strong>Zod v3 &rarr; Zod v4:</strong> Upgrade to the latest Zod version for performance improvements and new features. Requires tRPC v11+.</li>
+        <li><strong>Zod &rarr; Valibot (or other):</strong> Switch to a different schema library via Standard Schema. Requires tRPC v11+.</li>
+      </ul>
+
+      <h2>Before &amp; After: Zod v3 to v4</h2>
+      <p>
+        Most tRPC router code remains unchanged. The key differences are in Zod API changes:
+      </p>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (tRPC + Zod v3)</div>
+          <pre><code><span class="cmd">import</span> { z } <span class="cmd">from</span> <span class="string">'zod'</span>;
+<span class="cmd">import</span> { router, publicProcedure }
+  <span class="cmd">from</span> <span class="string">'./trpc'</span>;
+
+<span class="cmd">const</span> appRouter = router({
+  getUser: publicProcedure
+    .input(z.object({
+      id: z.string(),
+    }))
+    .query(({ input }) =&gt; {
+      <span class="cmd">return</span> db.user.findUnique({
+        where: { id: input.id }
+      });
+    }),
+
+  createUser: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      role: z.nativeEnum(Role),
+    }).strict())
+    .mutation(({ input }) =&gt; {
+      <span class="cmd">return</span> db.user.create({ data: input });
+    }),
+});</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (tRPC + Zod v4)</div>
+          <pre><code><span class="cmd">import</span> { z } <span class="cmd">from</span> <span class="string">'zod'</span>;
+<span class="cmd">import</span> { router, publicProcedure }
+  <span class="cmd">from</span> <span class="string">'./trpc'</span>;
+
+<span class="cmd">const</span> appRouter = router({
+  getUser: publicProcedure
+    .input(z.object({
+      id: z.string(),
+    }))
+    .query(({ input }) =&gt; {
+      <span class="cmd">return</span> db.user.findUnique({
+        where: { id: input.id }
+      });
+    }),
+
+  createUser: publicProcedure
+    .input(z.strictObject({
+      email: z.string().email(),
+      role: z.enum(Role),
+    }))
+    .mutation(({ input }) =&gt; {
+      <span class="cmd">return</span> db.user.create({ data: input });
+    }),
+});</code></pre>
+        </div>
+      </div>
+      <p>
+        Key changes: <code>z.nativeEnum()</code> becomes <code>z.enum()</code>, and
+        <code>.strict()</code> becomes <code>z.strictObject()</code>. SchemaShift handles
+        20+ breaking changes like these automatically.
+      </p>
+
+      <h2>Ecosystem Compatibility</h2>
+      <p>
+        SchemaShift's <code>EcosystemAnalyzer</code> detects third-party packages in your
+        <code>package.json</code> that may break during migration and provides specific upgrade
+        commands:
+      </p>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Package</th>
+            <th>Issue</th>
+            <th>Resolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>@trpc/server</code> v10</td>
+            <td>Uses Zod v3 types internally</td>
+            <td>Upgrade to <code>@trpc/server@^11.0.0</code></td>
+          </tr>
+          <tr>
+            <td><code>trpc-openapi</code></td>
+            <td>Depends on Zod v3 internals</td>
+            <td>Needs v4-compatible version</td>
+          </tr>
+          <tr>
+            <td><code>trpc-ui</code></td>
+            <td>Breaks with Zod v4 schemas</td>
+            <td>Wait for v4-compatible update</td>
+          </tr>
+          <tr>
+            <td><code>zod-validation-error</code></td>
+            <td>v4 breaks existing API</td>
+            <td><code>npm install zod-validation-error@^5.0.0</code></td>
+          </tr>
+          <tr>
+            <td><code>zodios</code></td>
+            <td>Zod-based HTTP client breaks with v4</td>
+            <td>Needs v4-compatible version</td>
+          </tr>
+          <tr>
+            <td><code>@ts-rest/core</code></td>
+            <td>Uses Zod for contract definitions</td>
+            <td>Check for v4-compatible release</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Run <code>schemashift migrate ./src -f zod-v3 -t v4 --compat-check</code> to get a full
+        compatibility report before proceeding with the migration.
+      </p>
+
+      <h2>Standard Schema and tRPC v11</h2>
+      <p>
+        tRPC v11 adopted the <a href="https://github.com/standard-schema/standard-schema">Standard Schema</a>
+        specification, which defines a common interface for schema validation libraries. This means
+        tRPC now works with any conforming library:
+      </p>
+      <ul>
+        <li><strong>Zod</strong> v3.23+ and v4</li>
+        <li><strong>Valibot</strong> v1+</li>
+        <li><strong>ArkType</strong> v2+</li>
+        <li><strong>Effect Schema</strong></li>
+      </ul>
+      <p>
+        This opens up the possibility of switching from Zod to a lighter alternative like Valibot
+        (approximately 1kB gzipped vs Zod's 13kB) without losing tRPC compatibility.
+      </p>
+      <div class="callout callout-info">
+        <div class="callout-title">Standard Schema Advisor</div>
+        <p>
+          SchemaShift includes a <code>StandardSchemaAdvisor</code> that detects when both your
+          source and target libraries support Standard Schema. It recommends whether to use an
+          adapter approach (keeping both libraries temporarily) or a full migration, with
+          generated code examples for tRPC v11 integration.
+        </p>
+      </div>
+
+      <h2>Migration Commands</h2>
+      <pre><code><span class="comment"># Upgrade Zod v3 to v4 with compatibility check</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> zod-v3 <span class="flag">-t</span> v4 <span class="flag">--compat-check</span>
+
+<span class="comment"># Use the tRPC preset for guided migration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">--preset</span> trpc-zod-v3-to-v4
+
+<span class="comment"># Switch from Zod to Valibot</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> zod <span class="flag">-t</span> valibot
+
+<span class="comment"># Analyze before migrating</span>
+<span class="cmd">schemashift</span> <span class="string">analyze</span> <span class="flag">./src</span> <span class="flag">--behavioral</span> zod-v3-to-v4</code></pre>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>tRPC v10 + Zod v4:</strong> tRPC v10 uses Zod v3 types in its internal type
+          system. Upgrading Zod without upgrading tRPC will produce TypeScript errors. You must
+          upgrade to tRPC v11 first, or upgrade both simultaneously.
+        </li>
+        <li>
+          <strong>trpc-openapi compatibility:</strong> The <code>trpc-openapi</code> package
+          accesses Zod internals (<code>._def</code>) to generate OpenAPI schemas. In Zod v4,
+          <code>._def</code> became <code>._zod.def</code>. SchemaShift transforms your code but
+          cannot patch third-party packages &mdash; check for a compatible release.
+        </li>
+        <li>
+          <strong>Error format changes:</strong> Zod v4 changed <code>error.errors</code> to
+          <code>error.issues</code> and <code>error.flatten()</code> to
+          <code>z.flattenError(error)</code>. If your tRPC error handlers access these properties,
+          SchemaShift will transform them automatically.
+        </li>
+        <li>
+          <strong>Mixed library routers:</strong> With tRPC v11 and Standard Schema, you can use
+          different schema libraries for different procedures. This enables incremental migration
+          &mdash; convert one router at a time.
+        </li>
+      </ul>
+
+      <div class="faq-section">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <h3>Can I upgrade Zod to v4 in a tRPC project?</h3>
+          <p>
+            Yes, but you need tRPC v11 or later. tRPC v10 uses Zod v3 types directly in its
+            internal type system, so upgrading Zod to v4 without upgrading tRPC will cause type
+            errors. tRPC v11 adopted Standard Schema support, making it compatible with Zod v4,
+            Valibot, ArkType, and other conforming libraries.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does tRPC v11 work with schema libraries other than Zod?</h3>
+          <p>
+            Yes. tRPC v11 supports the Standard Schema specification, which means any library
+            implementing the standard works out of the box. This includes Zod v3.23+, Zod v4,
+            Valibot v1+, ArkType v2+, and Effect Schema. You can even use different schema
+            libraries for different procedures in the same router.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What breaks when upgrading Zod in a tRPC project?</h3>
+          <p>
+            Common breaking changes include: <code>trpc-openapi</code> and <code>trpc-ui</code>
+            packages that depend on Zod v3 internals, <code>zod-validation-error</code> needing
+            v5.0.0+ for Zod v4, <code>zodios</code> HTTP client breaking with v4, and any code
+            accessing Zod internal types like <code>ZodType</code> or <code>._def</code>.
+            SchemaShift's ecosystem analyzer detects all of these automatically and provides
+            upgrade commands.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 to v4</strong>
+          <span>Complete guide to all 20+ breaking changes in the Zod v4 upgrade.</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod to Valibot</strong>
+          <span>Switch to Valibot for a smaller bundle &mdash; works with tRPC v11 via Standard Schema.</span>
+        </a>
+        <a href="typescript-schema-comparison.html">
+          <strong>Schema Library Comparison</strong>
+          <span>Compare all TypeScript schema libraries side-by-side to choose the right one.</span>
+        </a>
+      </div>
+
+      <h2>Get Started</h2>
+      <p>
+        SchemaShift's ecosystem analyzer catches tRPC compatibility issues before they break your
+        build. Run a compatibility check first, then migrate with confidence.
+      </p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <p style="margin-top: 1.5rem">
+        The Zod v3 to v4 migration and ecosystem analysis require the Individual tier or above.
+        <a href="index.html#pricing">View pricing</a>.
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

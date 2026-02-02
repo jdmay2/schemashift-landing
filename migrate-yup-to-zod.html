@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Migrate Yup to Zod - Complete Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Complete guide to migrate Yup to Zod with automatic AST-based transformations. Convert schemas, type helpers, and form resolvers with one command using SchemaShift."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-yup-to-zod.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-yup-to-zod.html" />
+    <meta property="og:title" content="Migrate Yup to Zod - Complete Guide | SchemaShift" />
+    <meta property="og:description" content="Complete guide to migrate Yup to Zod with automatic AST-based transformations. Convert schemas, type helpers, and form resolvers with one command using SchemaShift." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Migrate Yup to Zod - Complete Guide | SchemaShift" />
+    <meta name="twitter:description" content="Complete guide to migrate Yup to Zod with automatic AST-based transformations. Convert schemas, type helpers, and form resolvers with one command using SchemaShift." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I migrate from Yup to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Install SchemaShift CLI with npm install -g schemashift-cli, then run schemashift migrate ./src -f yup -t zod. The tool uses AST-based transformations to automatically convert Yup schemas to Zod equivalents, rewrite type helpers like InferType to z.infer, and update form library resolver imports. Always run with --dry-run first to preview changes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Yup patterns are automatically converted?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "SchemaShift automatically converts all common Yup patterns: string/number/boolean/date/array/object schemas, validation methods like .email(), .url(), .min(), .max(), .matches(), .positive(), .integer(), .oneOf() to z.enum(), .test() to .refine(), .nullable(), .optional(), InferType to z.infer, and boolean literals .isTrue()/.isFalse() to z.literal(). It also handles required/optional field semantics differences between the two libraries."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What needs manual review when migrating Yup to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Several patterns require manual review: Yup .when() conditionals have no direct Zod equivalent and need conversion to z.discriminatedUnion() or .superRefine(); Yup auto-coerces strings to numbers while Zod does not (use z.coerce.number() if needed); async .test() validators need .parseAsync() instead of .parse(); and custom error message formats differ between libraries. SchemaShift adds TODO comments for all patterns requiring manual attention."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        Migration Guides
+        <span>&rsaquo;</span>
+        Yup to Zod
+      </nav>
+
+      <div class="guide-header">
+        <h1>Migrate Yup to Zod</h1>
+        <p>
+          Zod has become the de facto standard for TypeScript schema validation thanks to its
+          TypeScript-first design, superior type inference, and rapidly growing ecosystem. If your
+          project uses Yup and you want better type safety, first-class TypeScript support, and
+          compatibility with tools like tRPC, React Hook Form, and Next.js Server Actions,
+          migrating to Zod is the natural next step.
+        </p>
+      </div>
+
+      <h2>Quick Start</h2>
+      <p>Install SchemaShift and run the migration in two commands:</p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <pre><code><span class="comment"># Migrate all Yup schemas to Zod</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod</code></pre>
+
+      <h2>Before &amp; After</h2>
+      <p>Here is a typical Yup schema and its Zod equivalent after migration:</p>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Yup</div>
+          <pre><code><span class="cmd">import</span> * <span class="cmd">as</span> yup <span class="cmd">from</span> <span class="string">'yup'</span>;
+
+<span class="cmd">const</span> userSchema = yup.object({
+  name: yup.string().required().min(<span class="flag">2</span>),
+  email: yup.string().email().required(),
+  age: yup.number().positive().integer(),
+  role: yup.mixed().oneOf([<span class="string">'admin'</span>, <span class="string">'user'</span>]),
+});
+
+<span class="cmd">type</span> User = yup.InferType&lt;<span class="cmd">typeof</span> userSchema&gt;;</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod</div>
+          <pre><code><span class="cmd">import</span> { z } <span class="cmd">from</span> <span class="string">'zod'</span>;
+
+<span class="cmd">const</span> userSchema = z.object({
+  name: z.string().min(<span class="flag">2</span>),
+  email: z.string().email(),
+  age: z.number().positive().int(),
+  role: z.enum([<span class="string">'admin'</span>, <span class="string">'user'</span>]),
+});
+
+<span class="cmd">type</span> User = z.infer&lt;<span class="cmd">typeof</span> userSchema&gt;;</code></pre>
+        </div>
+      </div>
+      <p>
+        Notice that Zod fields are required by default, so <code>.required()</code> is removed.
+        <code>.integer()</code> becomes <code>.int()</code>, and <code>yup.mixed().oneOf()</code>
+        becomes the more type-safe <code>z.enum()</code>.
+      </p>
+
+      <h2>Common Conversion Patterns</h2>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Yup</th>
+            <th>Zod</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>yup.string()</code></td>
+            <td><code>z.string()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>yup.number()</code></td>
+            <td><code>z.number()</code></td>
+            <td>No auto-coercion in Zod</td>
+          </tr>
+          <tr>
+            <td><code>yup.boolean()</code></td>
+            <td><code>z.boolean()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>yup.date()</code></td>
+            <td><code>z.date()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>yup.mixed()</code></td>
+            <td><code>z.unknown()</code></td>
+            <td>Zod has no untyped <code>mixed</code></td>
+          </tr>
+          <tr>
+            <td><code>.required()</code></td>
+            <td>(removed)</td>
+            <td>Zod fields are required by default</td>
+          </tr>
+          <tr>
+            <td><code>.notRequired()</code></td>
+            <td><code>.optional()</code></td>
+            <td>Explicit opt-in for optional fields</td>
+          </tr>
+          <tr>
+            <td><code>.nullable()</code></td>
+            <td><code>.nullable()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>.email()</code></td>
+            <td><code>.email()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>.url()</code></td>
+            <td><code>.url()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>.matches(regex)</code></td>
+            <td><code>.regex(regex)</code></td>
+            <td>Method name change</td>
+          </tr>
+          <tr>
+            <td><code>.integer()</code></td>
+            <td><code>.int()</code></td>
+            <td>Shortened method name</td>
+          </tr>
+          <tr>
+            <td><code>.positive()</code></td>
+            <td><code>.positive()</code></td>
+            <td>Direct equivalent</td>
+          </tr>
+          <tr>
+            <td><code>.oneOf([...])</code></td>
+            <td><code>z.enum([...])</code></td>
+            <td>Type-safe enum in Zod</td>
+          </tr>
+          <tr>
+            <td><code>.test(...)</code></td>
+            <td><code>.refine(...)</code></td>
+            <td>Arguments reordered (see gotchas)</td>
+          </tr>
+          <tr>
+            <td><code>InferType&lt;...&gt;</code></td>
+            <td><code>z.infer&lt;...&gt;</code></td>
+            <td>Type helper migration</td>
+          </tr>
+          <tr>
+            <td><code>yup.boolean().isTrue()</code></td>
+            <td><code>z.literal(true)</code></td>
+            <td>Boolean literal type</td>
+          </tr>
+          <tr>
+            <td><code>yup.boolean().isFalse()</code></td>
+            <td><code>z.literal(false)</code></td>
+            <td>Boolean literal type</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>Coercion Differences:</strong> Yup auto-coerces strings to numbers (e.g.,
+          <code>"42"</code> passes <code>yup.number()</code>). Zod does not. If your application
+          relies on this behavior, use <code>z.coerce.number()</code> instead of
+          <code>z.number()</code>. SchemaShift detects implicit coercion patterns and warns you.
+        </li>
+        <li>
+          <strong>.when() Conditionals:</strong> Yup's <code>.when()</code> has no direct Zod
+          equivalent. SchemaShift analyzes the condition pattern and generates the appropriate Zod
+          replacement: <code>z.discriminatedUnion()</code> for simple discriminator patterns,
+          <code>z.union()</code> for either/or cases, or <code>.superRefine()</code> scaffolding
+          for complex conditions.
+        </li>
+        <li>
+          <strong>Required vs Optional:</strong> Yup fields are optional by default; Zod fields
+          are required by default. This is the most common source of behavioral differences.
+          SchemaShift handles this automatically, adding <code>.optional()</code> where Yup fields
+          lacked <code>.required()</code>.
+        </li>
+        <li>
+          <strong>Custom Error Messages:</strong> Yup's
+          <code>.test('name', 'message', fn)</code> becomes
+          <code>.refine(fn, 'message')</code> in Zod. The arguments are reordered &mdash; the
+          validation function comes first, then the message. SchemaShift rewrites these
+          automatically.
+        </li>
+        <li>
+          <strong>Async Validation:</strong> Yup's async <code>.test()</code> becomes
+          <code>.refine(async ...)</code> in Zod. Remember to switch from <code>.parse()</code>
+          to <code>.parseAsync()</code> at all call sites that use async validators, or validation
+          will throw.
+        </li>
+      </ul>
+
+      <h2>Automated Migration Command</h2>
+      <p>
+        SchemaShift provides several flags to control the migration process. Start with a dry run
+        to preview changes before modifying any files:
+      </p>
+      <pre><code><span class="comment"># Dry run first</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--dry-run</span>
+
+<span class="comment"># Run migration with backup</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod
+
+<span class="comment"># With git branch isolation</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--git-branch</span> migrate/yup-to-zod
+
+<span class="comment"># Generate diff output</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--dry-run</span> <span class="flag">--output-diff</span> changes.diff</code></pre>
+
+      <h2>Manual Migration Checklist</h2>
+      <p>
+        After running the automated migration, review these items to ensure everything works
+        correctly:
+      </p>
+      <ul class="checklist">
+        <li>Review all <code>TODO(schemashift)</code> comments in migrated files</li>
+        <li>Convert <code>.when()</code> conditionals to <code>.superRefine()</code> or <code>z.discriminatedUnion()</code></li>
+        <li>Replace async <code>.test()</code> validators and switch to <code>.parseAsync()</code></li>
+        <li>Update form library resolvers (<code>yupResolver</code> &rarr; <code>zodResolver</code>)</li>
+        <li>Update test assertions for new error message format</li>
+        <li>Remove <code>yup</code> from package.json dependencies</li>
+        <li>Run your test suite to verify behavior</li>
+      </ul>
+
+      <div class="faq-section">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <h3>How do I migrate from Yup to Zod?</h3>
+          <p>
+            Install SchemaShift CLI with <code>npm install -g schemashift-cli</code>, then run
+            <code>schemashift migrate ./src -f yup -t zod</code>. The tool uses AST-based
+            transformations to automatically convert Yup schemas to Zod equivalents, rewrite type
+            helpers like <code>InferType</code> to <code>z.infer</code>, and update form library
+            resolver imports. Always run with <code>--dry-run</code> first to preview changes.
+            Every migration creates a timestamped backup that you can restore with
+            <code>schemashift rollback</code>.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What Yup patterns are automatically converted?</h3>
+          <p>
+            SchemaShift automatically converts all common Yup patterns: string, number, boolean,
+            date, array, and object schemas; validation methods like <code>.email()</code>,
+            <code>.url()</code>, <code>.min()</code>, <code>.max()</code>, <code>.matches()</code>,
+            <code>.positive()</code>, <code>.integer()</code>; <code>.oneOf()</code> to
+            <code>z.enum()</code>; <code>.test()</code> to <code>.refine()</code>;
+            <code>.nullable()</code> and <code>.optional()</code>;
+            <code>InferType</code> to <code>z.infer</code>; and boolean literals
+            <code>.isTrue()</code>/<code>.isFalse()</code> to <code>z.literal()</code>. It also
+            handles the required/optional field semantics differences between the two libraries.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What needs manual review when migrating Yup to Zod?</h3>
+          <p>
+            Several patterns require manual review: Yup <code>.when()</code> conditionals have no
+            direct Zod equivalent and need conversion to <code>z.discriminatedUnion()</code> or
+            <code>.superRefine()</code>; Yup auto-coerces strings to numbers while Zod does not
+            (use <code>z.coerce.number()</code> if needed); async <code>.test()</code> validators
+            require switching call sites to <code>.parseAsync()</code>; and custom error message
+            formats differ between libraries. SchemaShift adds
+            <code>TODO(schemashift)</code> comments for all patterns requiring manual attention.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-joi-to-zod.html">
+          <strong>Joi to Zod</strong>
+          <span>Migrate from Joi validation to Zod with automatic schema conversion.</span>
+        </a>
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 to v4</strong>
+          <span>After migrating to Zod, upgrade to v4 for the latest features and performance.</span>
+        </a>
+        <a href="migrate-zod-to-valibot.html">
+          <strong>Zod to Valibot</strong>
+          <span>Considering alternatives? Valibot offers a smaller bundle with tree-shaking.</span>
+        </a>
+        <a href="react-hook-form-migration.html">
+          <strong>React Hook Form Migration</strong>
+          <span>Update form resolvers and validation when switching schema libraries.</span>
+        </a>
+      </div>
+
+      <h2>Get Started</h2>
+      <p>
+        SchemaShift handles the tedious parts of migration so you can focus on reviewing edge
+        cases. The Yup to Zod migration is available on the free tier for up to 10 files.
+      </p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <p style="margin-top: 1.5rem">
+        Need unlimited files, git integration, or advanced analysis?
+        <a href="index.html#pricing">View pricing</a>.
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convert Joi to Zod - Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Convert Joi to Zod with automated AST-based migration. Step-by-step guide covering validation mapping, edge cases, and the SchemaShift CLI for fast, safe Joi to Zod conversion."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/migrate-joi-to-zod.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/migrate-joi-to-zod.html" />
+    <meta property="og:title" content="Convert Joi to Zod - Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Convert Joi to Zod with automated AST-based migration. Step-by-step guide covering validation mapping, edge cases, and the SchemaShift CLI for fast, safe Joi to Zod conversion." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Convert Joi to Zod - Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Convert Joi to Zod with automated AST-based migration. Step-by-step guide covering validation mapping, edge cases, and the SchemaShift CLI for fast, safe Joi to Zod conversion." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- FAQPage JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can I automatically convert Joi schemas to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. SchemaShift provides an AST-based CLI that automatically converts Joi schemas to Zod, including import rewriting, method chain transformation, and type helper migration. Run 'schemashift migrate ./src -f joi -t zod' to convert an entire directory. Unsupported patterns receive inline TODO comments with actionable guidance."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What Joi features are not directly supported in Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Joi's .when() conditional validation, .with()/.without() field dependencies, .and()/.nand()/.or()/.xor() group constraints, and Joi.ref() cross-field references have no direct Zod equivalents. These are migrated to .superRefine() or .refine() patterns in Zod, with SchemaShift generating scaffolding code and TODO comments for manual review."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why should I migrate from Joi to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Zod is TypeScript-first and provides automatic type inference via z.infer, eliminating the need to maintain separate TypeScript interfaces. Zod has a smaller bundle size, faster validation performance, and a growing ecosystem with first-class support in tRPC, React Hook Form, and Next.js. Joi was designed for JavaScript and lacks native TypeScript type inference."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        Migration Guides
+        <span>&rsaquo;</span>
+        Joi to Zod
+      </nav>
+
+      <!-- Guide Header -->
+      <div class="guide-header">
+        <h1>Migrate Joi to Zod</h1>
+        <p>
+          Joi was built for JavaScript and lacks native TypeScript type inference.
+          Zod is TypeScript-first, providing automatic type inference with <code>z.infer</code>,
+          a smaller bundle size, and first-class support in modern frameworks like tRPC,
+          React Hook Form, and Next.js. This guide covers every step of the migration.
+        </p>
+      </div>
+
+      <!-- Quick Start -->
+      <h2>Quick Start</h2>
+      <p>Install SchemaShift and run the migration in two commands:</p>
+      <pre><code><span class="cmd">npm install -g schemashift-cli</span>
+
+<span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f joi -t zod</span></code></pre>
+      <p>
+        This analyzes every file in <code>./src</code>, rewrites Joi schemas to Zod,
+        updates imports, and creates backup files automatically.
+      </p>
+
+      <!-- Before / After -->
+      <h2>Before &amp; After</h2>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Joi (before)</div>
+          <pre><code><span class="comment">import</span> Joi <span class="comment">from</span> <span class="string">'joi'</span>;
+
+<span class="comment">const</span> userSchema = Joi.object({
+  name: Joi.string().required().min(2),
+  email: Joi.string().email().required(),
+  port: Joi.number().port(),
+  role: Joi.string().valid(<span class="string">'admin'</span>, <span class="string">'user'</span>)
+});</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">Zod (after)</div>
+          <pre><code><span class="comment">import</span> { z } <span class="comment">from</span> <span class="string">'zod'</span>;
+
+<span class="comment">const</span> userSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  port: z.number().int().min(0).max(65535),
+  role: z.enum([<span class="string">'admin'</span>, <span class="string">'user'</span>])
+});
+
+<span class="comment">type</span> User = z.infer&lt;<span class="comment">typeof</span> userSchema&gt;;</code></pre>
+        </div>
+      </div>
+      <p>
+        Notice how Zod gives you the <code>User</code> type for free &mdash; no separate
+        interface to maintain.
+      </p>
+
+      <!-- Conversion Table -->
+      <h2>Conversion Reference</h2>
+      <p>
+        Complete mapping from Joi methods to their Zod equivalents. SchemaShift handles
+        all of these automatically.
+      </p>
+      <div style="overflow-x: auto;">
+        <table class="conversion-table">
+          <thead>
+            <tr>
+              <th>Joi</th>
+              <th>Zod</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>Joi.string()</code></td>
+              <td><code>z.string()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>Joi.number()</code></td>
+              <td><code>z.number()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>Joi.boolean()</code></td>
+              <td><code>z.boolean()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>Joi.date()</code></td>
+              <td><code>z.date()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>Joi.any()</code></td>
+              <td><code>z.unknown()</code></td>
+              <td>Prefer <code>z.unknown()</code> over <code>z.any()</code> for type safety</td>
+            </tr>
+            <tr>
+              <td><code>Joi.binary()</code></td>
+              <td><code>z.instanceof(Buffer)</code></td>
+              <td>Node.js only</td>
+            </tr>
+            <tr>
+              <td><code>.required()</code></td>
+              <td>(removed)</td>
+              <td>Zod fields are required by default</td>
+            </tr>
+            <tr>
+              <td><code>.optional()</code></td>
+              <td><code>.optional()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.allow(null)</code></td>
+              <td><code>.nullable()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.forbidden()</code></td>
+              <td><code>z.never()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.email()</code></td>
+              <td><code>.email()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.uri()</code></td>
+              <td><code>.url()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.uuid()</code></td>
+              <td><code>.uuid()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.ip()</code></td>
+              <td><code>.ip()</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.pattern(regex)</code></td>
+              <td><code>.regex(regex)</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.alphanum()</code></td>
+              <td><code>.regex(/^[a-zA-Z0-9]+$/)</code></td>
+              <td>No built-in Zod equivalent</td>
+            </tr>
+            <tr>
+              <td><code>.greater(n)</code></td>
+              <td><code>.gt(n)</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.less(n)</code></td>
+              <td><code>.lt(n)</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>.port()</code></td>
+              <td><code>.int().min(0).max(65535)</code></td>
+              <td>No built-in port validator in Zod</td>
+            </tr>
+            <tr>
+              <td><code>.valid(...)</code></td>
+              <td><code>z.enum([...])</code></td>
+              <td>For string literals</td>
+            </tr>
+            <tr>
+              <td><code>.invalid(...)</code></td>
+              <td><code>.refine()</code></td>
+              <td>Custom validation needed</td>
+            </tr>
+            <tr>
+              <td><code>.custom(fn)</code></td>
+              <td><code>.refine(fn)</code></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><code>Joi.alternatives()</code></td>
+              <td><code>z.union()</code></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Edge Cases -->
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <p>
+        These Joi patterns have no direct Zod equivalent and require manual attention.
+        SchemaShift generates scaffolding code and inline TODO comments for each one.
+      </p>
+      <ul class="gotcha-list">
+        <li>
+          <strong><code>.when()</code> conditionals</strong> &mdash;
+          Joi's <code>.when()</code> supports conditional schema selection based on sibling fields.
+          Zod has no built-in equivalent. SchemaShift generates <code>.superRefine()</code>
+          scaffolding with the condition logic preserved in comments.
+        </li>
+        <li>
+          <strong><code>.with()</code> / <code>.without()</code></strong> &mdash;
+          Field dependency rules (e.g., "if field A is present, field B is required") map to
+          <code>.superRefine()</code> with manual field-presence checks in Zod.
+        </li>
+        <li>
+          <strong><code>.and()</code> / <code>.nand()</code> / <code>.or()</code> / <code>.xor()</code></strong> &mdash;
+          Group constraints on object fields require custom <code>.superRefine()</code> logic.
+          SchemaShift generates the boilerplate with field names preserved.
+        </li>
+        <li>
+          <strong><code>Joi.ref()</code> cross-references</strong> &mdash;
+          Cross-field references like <code>Joi.ref('password')</code> for confirmation fields
+          become <code>.refine()</code> callbacks that access the full object via the path.
+        </li>
+        <li>
+          <strong><code>.messages()</code> custom error strings</strong> &mdash;
+          Joi's centralized <code>.messages()</code> object does not map cleanly.
+          Zod uses inline error strings passed directly to each validation method
+          (e.g., <code>.min(2, { message: "Too short" })</code>).
+        </li>
+        <li>
+          <strong><code>.external()</code> async validation</strong> &mdash;
+          Joi's <code>.external()</code> for async checks becomes
+          <code>.refine(async () =&gt; { ... })</code> in Zod, requiring
+          <code>.parseAsync()</code> instead of <code>.parse()</code> at the call site.
+        </li>
+      </ul>
+
+      <!-- Automated Migration -->
+      <h2>Automated Migration Commands</h2>
+      <p>Preview changes without modifying any files:</p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f joi -t zod --dry-run</span></code></pre>
+
+      <p>Run the full migration with verbose output:</p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f joi -t zod --verbose</span></code></pre>
+
+      <p>Generate a unified diff for code review:</p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f joi -t zod --dry-run --output-diff changes.patch</span></code></pre>
+
+      <p>Migrate with a Git branch for easy rollback:</p>
+      <pre><code><span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f joi -t zod --git-branch migrate/joi-to-zod</span></code></pre>
+
+      <div class="callout callout-info">
+        <div class="callout-title">Backup included</div>
+        <p>
+          SchemaShift creates automatic backups before modifying files. Use
+          <code>schemashift rollback</code> to restore originals at any time.
+        </p>
+      </div>
+
+      <!-- Manual Checklist -->
+      <h2>Manual Migration Checklist</h2>
+      <p>After running the automated migration, review these items:</p>
+      <ul class="checklist">
+        <li>Search for <code>TODO(schemashift)</code> comments and resolve each one</li>
+        <li>Replace <code>Joi.validate(data, schema)</code> calls with <code>schema.parse(data)</code> or <code>schema.safeParse(data)</code></li>
+        <li>Update error handling &mdash; Zod throws <code>ZodError</code> instead of returning <code>{ error, value }</code></li>
+        <li>Remove the <code>joi</code> package from <code>package.json</code> once all schemas are converted</li>
+        <li>Add <code>z.infer&lt;typeof schema&gt;</code> type exports where you previously maintained manual interfaces</li>
+        <li>Update form library resolvers (e.g., <code>joiResolver</code> to <code>zodResolver</code> in React Hook Form)</li>
+        <li>Replace <code>Joi.ref()</code> cross-references with <code>.refine()</code> callbacks</li>
+        <li>Convert <code>.external()</code> async validators and switch to <code>.parseAsync()</code></li>
+        <li>Run your test suite to verify validation behavior is preserved</li>
+      </ul>
+
+      <!-- FAQ Section -->
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-section">
+        <div class="faq-item">
+          <h3>Can I automatically convert Joi schemas to Zod?</h3>
+          <p>
+            Yes. SchemaShift provides an AST-based CLI that automatically converts Joi schemas
+            to Zod, including import rewriting, method chain transformation, and type helper
+            migration. Run <code>schemashift migrate ./src -f joi -t zod</code> to convert
+            an entire directory. Unsupported patterns receive inline TODO comments with
+            actionable guidance.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>What Joi features are not directly supported in Zod?</h3>
+          <p>
+            Joi's <code>.when()</code> conditional validation, <code>.with()</code> /
+            <code>.without()</code> field dependencies, <code>.and()</code> /
+            <code>.nand()</code> / <code>.or()</code> / <code>.xor()</code> group constraints,
+            and <code>Joi.ref()</code> cross-field references have no direct Zod equivalents.
+            These are migrated to <code>.superRefine()</code> or <code>.refine()</code>
+            patterns in Zod, with SchemaShift generating scaffolding code and TODO comments
+            for manual review.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Why should I migrate from Joi to Zod?</h3>
+          <p>
+            Zod is TypeScript-first and provides automatic type inference via
+            <code>z.infer</code>, eliminating the need to maintain separate TypeScript
+            interfaces. Zod has a smaller bundle size, faster validation performance, and
+            a growing ecosystem with first-class support in tRPC, React Hook Form, and
+            Next.js. Joi was designed for JavaScript and lacks native TypeScript type inference.
+          </p>
+        </div>
+      </div>
+
+      <!-- Related Guides -->
+      <h2>Related Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup to Zod</strong>
+          <span>Migrate Yup schemas to Zod with automatic coercion detection and form resolver updates.</span>
+        </a>
+        <a href="migrate-zod-v3-to-v4.html">
+          <strong>Zod v3 to v4</strong>
+          <span>Upgrade Zod v3 schemas to v4 with 20+ breaking change transforms handled automatically.</span>
+        </a>
+        <a href="trpc-schema-migration.html">
+          <strong>tRPC Schema Migration</strong>
+          <span>Migrate tRPC router schemas between validation libraries without breaking your API.</span>
+        </a>
+      </div>
+
+      <!-- CTA -->
+      <div style="text-align: center; padding: 3rem 0 1rem;">
+        <h2 style="margin-bottom: 1rem;">Ready to migrate?</h2>
+        <p style="color: var(--muted); margin-bottom: 2rem;">
+          Convert your Joi schemas to Zod in minutes. Free for up to 10 files.
+        </p>
+        <code class="install-cmd">npm install -g schemashift-cli</code>
+        <div style="margin-top: 1.5rem;">
+          <a href="docs.html" class="btn btn-secondary btn-inline" style="margin-right: 0.5rem;">Read the Docs</a>
+          <a href="index.html#pricing" class="btn btn-primary btn-inline">View Pricing</a>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer>
+        <p>
+          Built by <a href="https://qwady.com">Qwady Solutions</a> &middot;
+          <a href="docs.html">Documentation</a> &middot;
+          <a href="index.html">Home</a>
+        </p>
+      </footer>
+
+    </div>
+  </body>
+</html>

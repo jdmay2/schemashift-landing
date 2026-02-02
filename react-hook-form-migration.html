@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Hook Form Schema Migration Guide | SchemaShift</title>
+    <meta
+      name="description"
+      content="Migrate React Hook Form validation schemas between Yup, Zod, Joi, and Valibot. SchemaShift auto-detects and rewrites resolver imports alongside your schema migration."
+    />
+    <link rel="canonical" href="https://schemashift.qwady.app/react-hook-form-migration.html" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://schemashift.qwady.app/react-hook-form-migration.html" />
+    <meta property="og:title" content="React Hook Form Schema Migration Guide | SchemaShift" />
+    <meta property="og:description" content="Migrate React Hook Form validation schemas between Yup, Zod, Joi, and Valibot. SchemaShift auto-detects and rewrites resolver imports alongside your schema migration." />
+    <meta property="og:site_name" content="SchemaShift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="React Hook Form Schema Migration Guide | SchemaShift" />
+    <meta name="twitter:description" content="Migrate React Hook Form validation schemas between Yup, Zod, Joi, and Valibot. SchemaShift auto-detects and rewrites resolver imports alongside your schema migration." />
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>" />
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Structured Data - FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I migrate React Hook Form from Yup to Zod?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Run schemashift migrate ./src -f yup -t zod and SchemaShift will automatically detect React Hook Form usage, convert your Yup schemas to Zod, and rewrite yupResolver imports to zodResolver. Make sure @hookform/resolvers is updated to a version that supports Zod."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does SchemaShift handle resolver imports automatically?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. SchemaShift's FormResolverMigrator detects resolver imports from @hookform/resolvers and rewrites them to match your target schema library. It handles yupResolver to zodResolver, joiResolver to zodResolver, and zodResolver to valibotResolver automatically."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to update @hookform/resolvers separately?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. After migrating your schemas, ensure @hookform/resolvers is at a version that includes the resolver for your target library. SchemaShift rewrites the import statements but you should run npm install @hookform/resolvers@latest to get the latest resolver support. The package has included zodResolver since v3.0.0."
+          }
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <nav class="breadcrumb">
+        <a href="index.html">Home</a>
+        <span>&rsaquo;</span>
+        Framework Guides
+        <span>&rsaquo;</span>
+        React Hook Form
+      </nav>
+
+      <div class="guide-header">
+        <h1>React Hook Form Schema Migration</h1>
+        <p>
+          React Hook Form uses a resolver-based architecture that cleanly separates form handling
+          from schema validation. This makes it one of the easiest form libraries to migrate between
+          schema libraries &mdash; SchemaShift handles both the schema conversion and the resolver
+          import rewriting in a single command.
+        </p>
+      </div>
+
+      <h2>Before &amp; After</h2>
+      <p>
+        SchemaShift migrates both the schema definitions and the resolver imports. Here is a typical
+        React Hook Form component before and after migrating from Yup to Zod:
+      </p>
+      <div class="code-comparison">
+        <div class="code-block">
+          <div class="code-block-header">Before (Yup)</div>
+          <pre><code><span class="cmd">import</span> { useForm } <span class="cmd">from</span> <span class="string">'react-hook-form'</span>;
+<span class="cmd">import</span> { yupResolver } <span class="cmd">from</span> <span class="string">'@hookform/resolvers/yup'</span>;
+<span class="cmd">import</span> * <span class="cmd">as</span> yup <span class="cmd">from</span> <span class="string">'yup'</span>;
+
+<span class="cmd">const</span> schema = yup.object({
+  email: yup.string().email().required(),
+  password: yup.string().min(<span class="flag">8</span>).required(),
+});
+
+<span class="cmd">const</span> { register, handleSubmit } = useForm({
+  resolver: yupResolver(schema),
+});</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">After (Zod)</div>
+          <pre><code><span class="cmd">import</span> { useForm } <span class="cmd">from</span> <span class="string">'react-hook-form'</span>;
+<span class="cmd">import</span> { zodResolver } <span class="cmd">from</span> <span class="string">'@hookform/resolvers/zod'</span>;
+<span class="cmd">import</span> { z } <span class="cmd">from</span> <span class="string">'zod'</span>;
+
+<span class="cmd">const</span> schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(<span class="flag">8</span>),
+});
+
+<span class="cmd">const</span> { register, handleSubmit } = useForm({
+  resolver: zodResolver(schema),
+});</code></pre>
+        </div>
+      </div>
+      <p>
+        Notice that both the schema library imports and the resolver function are rewritten
+        automatically. The <code>useForm</code> call itself remains unchanged &mdash; only the
+        <code>resolver</code> wrapper function changes.
+      </p>
+
+      <h2>Automatic Resolver Migration</h2>
+      <p>
+        SchemaShift's <code>FormResolverMigrator</code> detects <code>@hookform/resolvers</code>
+        imports in your source files and rewrites them to match your target schema library. This
+        happens automatically during any migration that involves a supported form library.
+      </p>
+
+      <h3>Supported Resolver Mappings</h3>
+      <table class="conversion-table">
+        <thead>
+          <tr>
+            <th>Migration Path</th>
+            <th>Source Resolver</th>
+            <th>Target Resolver</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Yup &rarr; Zod</td>
+            <td><code>yupResolver</code></td>
+            <td><code>zodResolver</code></td>
+          </tr>
+          <tr>
+            <td>Joi &rarr; Zod</td>
+            <td><code>joiResolver</code></td>
+            <td><code>zodResolver</code></td>
+          </tr>
+          <tr>
+            <td>Zod &rarr; Valibot</td>
+            <td><code>zodResolver</code></td>
+            <td><code>valibotResolver</code></td>
+          </tr>
+          <tr>
+            <td>Zod &rarr; Yup</td>
+            <td><code>zodResolver</code></td>
+            <td><code>yupResolver</code></td>
+          </tr>
+          <tr>
+            <td>Valibot &rarr; Zod</td>
+            <td><code>valibotResolver</code></td>
+            <td><code>zodResolver</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The import path is also updated (e.g., <code>@hookform/resolvers/yup</code> becomes
+        <code>@hookform/resolvers/zod</code>).
+      </p>
+
+      <h2>Migration Command</h2>
+      <p>
+        No special flags are needed &mdash; resolver migration is automatic when SchemaShift detects
+        React Hook Form in your project:
+      </p>
+      <pre><code><span class="comment"># Preview changes first</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod <span class="flag">--dry-run</span>
+
+<span class="comment"># Run the migration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">-f</span> yup <span class="flag">-t</span> zod
+
+<span class="comment"># Use the react-hook-form preset for guided migration</span>
+<span class="cmd">schemashift</span> <span class="string">migrate</span> <span class="flag">./src</span> <span class="flag">--preset</span> react-hook-form-yup-to-zod</code></pre>
+      <div class="callout callout-info">
+        <div class="callout-title">Migration Preset</div>
+        <p>
+          The <code>react-hook-form-yup-to-zod</code> preset is a built-in migration template
+          that configures optimal settings for React Hook Form projects. Use
+          <code>schemashift presets</code> to see all available templates.
+        </p>
+      </div>
+
+      <h2>Edge Cases &amp; Gotchas</h2>
+      <ul class="gotcha-list">
+        <li>
+          <strong>@hookform/resolvers version:</strong> Ensure your installed version of
+          <code>@hookform/resolvers</code> includes the resolver for your target library.
+          The <code>zodResolver</code> has been available since v3.0.0. Run
+          <code>npm install @hookform/resolvers@latest</code> after migration.
+        </li>
+        <li>
+          <strong>Error message format differences:</strong> Yup and Zod produce different error
+          object structures. If your components access raw error objects (beyond what
+          <code>formState.errors</code> provides), you may need to update those accessors. The
+          resolver layer normalizes most differences, but custom error rendering logic should be
+          reviewed.
+        </li>
+        <li>
+          <strong>Resolver options:</strong> Some resolvers accept configuration options (e.g.,
+          <code>zodResolver(schema, { mode: 'sync' })</code>). These options are resolver-specific
+          and are not automatically migrated. SchemaShift preserves the second argument as-is and
+          adds a TODO comment if it detects resolver options.
+        </li>
+        <li>
+          <strong>Dynamic schemas:</strong> If you construct schemas dynamically (e.g., inside a
+          component or via a factory function), ensure the resolver call is updated wherever the
+          schema is created. SchemaShift rewrites all detected resolver imports in the scanned
+          files.
+        </li>
+      </ul>
+
+      <h2>After Migration</h2>
+      <ul class="checklist">
+        <li>Run <code>npm install @hookform/resolvers@latest</code> to ensure resolver compatibility</li>
+        <li>Review all <code>TODO(schemashift)</code> comments in migrated files</li>
+        <li>Test form submission and validation error display</li>
+        <li>Check that custom error rendering still works with the new error format</li>
+        <li>Remove the old schema library from <code>package.json</code> if no longer needed</li>
+        <li>Run your test suite to verify form behavior</li>
+      </ul>
+
+      <div class="faq-section">
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <h3>How do I migrate React Hook Form from Yup to Zod?</h3>
+          <p>
+            Run <code>schemashift migrate ./src -f yup -t zod</code> and SchemaShift will
+            automatically detect React Hook Form usage, convert your Yup schemas to Zod, and
+            rewrite <code>yupResolver</code> imports to <code>zodResolver</code>. Make sure
+            <code>@hookform/resolvers</code> is updated to a version that supports Zod. Use
+            <code>--dry-run</code> first to preview changes.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Does SchemaShift handle resolver imports automatically?</h3>
+          <p>
+            Yes. SchemaShift's <code>FormResolverMigrator</code> detects resolver imports from
+            <code>@hookform/resolvers</code> and rewrites them to match your target schema library.
+            It handles <code>yupResolver</code> to <code>zodResolver</code>,
+            <code>joiResolver</code> to <code>zodResolver</code>, and <code>zodResolver</code>
+            to <code>valibotResolver</code> automatically.
+          </p>
+        </div>
+        <div class="faq-item">
+          <h3>Do I need to update @hookform/resolvers separately?</h3>
+          <p>
+            Yes. After migrating your schemas, ensure <code>@hookform/resolvers</code> is at a
+            version that includes the resolver for your target library. SchemaShift rewrites the
+            import statements, but you should run
+            <code>npm install @hookform/resolvers@latest</code> to get the latest resolver support.
+            The package has included <code>zodResolver</code> since v3.0.0.
+          </p>
+        </div>
+      </div>
+
+      <h2>Related Migration Guides</h2>
+      <div class="related-guides">
+        <a href="migrate-yup-to-zod.html">
+          <strong>Yup to Zod</strong>
+          <span>Full guide to migrating Yup schemas to Zod with all conversion patterns.</span>
+        </a>
+        <a href="migrate-joi-to-zod.html">
+          <strong>Joi to Zod</strong>
+          <span>Migrate Joi validation schemas to Zod with automatic transforms.</span>
+        </a>
+        <a href="formik-migration.html">
+          <strong>Formik Migration</strong>
+          <span>Migrate Formik validation &mdash; requires manual adapter setup unlike RHF.</span>
+        </a>
+      </div>
+
+      <h2>Get Started</h2>
+      <p>
+        React Hook Form's resolver architecture makes schema migration straightforward.
+        SchemaShift handles both the schema conversion and resolver rewriting automatically.
+      </p>
+      <code class="install-cmd">npm install -g schemashift-cli</code>
+      <p style="margin-top: 1.5rem">
+        Resolver migration requires the Individual tier or above.
+        <a href="index.html#pricing">View pricing</a>.
+      </p>
+
+      <footer>
+        <p>Built by <a href="https://qwady.com">Qwady Solutions</a></p>
+        <p style="margin-top: 0.5rem">
+          <a href="docs.html">Docs</a> &middot;
+          <a href="https://github.com/qwady/schemashift">GitHub</a> &middot;
+          <a href="https://www.npmjs.com/package/schemashift">npm</a> &middot;
+          <a href="mailto:support@qwady.com">Support</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
