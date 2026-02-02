@@ -53,162 +53,258 @@
   </head>
   <body>
     <div class="container">
-      <header>
-        <div class="logo">Schema<span>Shift</span></div>
-        <p class="tagline">
-          TypeScript schema migration CLI. Convert between Zod, Yup, Joi, io-ts,
-          Valibot, ArkType, Superstruct, and Effect Schema with AST-based transformations.
+
+      <!-- ════════ HERO ════════ -->
+      <header class="hero">
+        <div class="hero-badge">TypeScript Schema Migration CLI</div>
+        <h1 class="hero-title">Switch schema libraries<br>without rewriting everything</h1>
+        <p class="hero-subtitle">
+          AST-based transforms between Zod, Yup, Joi, io-ts, Valibot, ArkType, Superstruct, and Effect Schema.
+          Backup everything. Rollback anything.
         </p>
-        <code class="install-cmd">npm install -g schemashift-cli</code>
+        <div class="hero-actions">
+          <code class="install-cmd">npm install -g schemashift-cli</code>
+        </div>
+        <div class="hero-links">
+          <a href="docs.html" class="btn btn-secondary btn-inline">Read the Docs</a>
+          <a href="#pricing" class="btn btn-primary btn-inline">View Pricing</a>
+        </div>
       </header>
 
-      <section class="migrations-section">
-        <h2>Why Migrate With SchemaShift?</h2>
-        <div class="migration-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
-          <div class="card">
-            <h3>Automatic Type Helpers</h3>
-            <p>Converts <code>InferType</code>, <code>TypeOf</code>, <code>z.infer</code>, and <code>v.InferOutput</code> across all supported libraries automatically.</p>
+      <!-- ════════ BEFORE / AFTER ════════ -->
+      <section class="demo-section">
+        <div class="code-comparison">
+          <div class="code-block">
+            <div class="code-block-header">Before &mdash; Yup</div>
+            <pre><code><span class="comment">import</span> * <span class="comment">as</span> <span class="string">yup</span> <span class="comment">from</span> <span class="string">'yup'</span>;
+
+<span class="comment">const</span> userSchema = yup.object({
+  name: yup.string().required(),
+  email: yup.string().email().required(),
+  age: yup.number().min(0).max(150),
+});</code></pre>
           </div>
-          <div class="card">
-            <h3>Inline TODO Comments</h3>
-            <p>Unsupported patterns get <code>/* TODO(schemashift): ... */</code> comments with actionable guidance and links, so nothing is silently dropped.</p>
+          <div class="code-block">
+            <div class="code-block-header">After &mdash; Zod</div>
+            <pre><code><span class="comment">import</span> { <span class="string">z</span> } <span class="comment">from</span> <span class="string">'zod'</span>;
+
+<span class="comment">const</span> userSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().min(0).max(150).optional(),
+});</code></pre>
           </div>
-          <div class="card">
-            <h3>Form Library Awareness</h3>
-            <p>Detects react-hook-form, Formik, and Mantine imports and warns you to update resolver/adapter packages for the target library.</p>
+        </div>
+        <p class="demo-caption">One command. Full AST transformation. Type helpers, imports, and method chains all converted.</p>
+      </section>
+
+      <!-- ════════ LIBRARY STRIP ════════ -->
+      <section class="library-strip">
+        <p class="library-strip-label">Supports</p>
+        <div class="library-logos">
+          <span class="lib-tag">Zod</span>
+          <span class="lib-tag">Yup</span>
+          <span class="lib-tag">Joi</span>
+          <span class="lib-tag">io-ts</span>
+          <span class="lib-tag">Valibot</span>
+          <span class="lib-tag">ArkType</span>
+          <span class="lib-tag">Superstruct</span>
+          <span class="lib-tag">Effect Schema</span>
+        </div>
+      </section>
+
+      <!-- ════════ HOW IT WORKS ════════ -->
+      <section class="steps-section">
+        <h2>How It Works</h2>
+        <div class="steps-grid">
+          <div class="step">
+            <div class="step-number">1</div>
+            <h3>Analyze</h3>
+            <p>Scan your project. Detect schema libraries, patterns, and migration complexity.</p>
+            <code class="step-cmd">schemashift analyze ./src</code>
           </div>
-          <div class="card">
-            <h3>Zod v3&#8594;v4 Coverage</h3>
-            <p>Handles 20+ breaking changes: <code>.merge()</code>, <code>.superRefine()</code>, <code>z.nativeEnum()</code>, <code>.flatten()</code>/<code>.format()</code>, <code>._def</code>, error params, <code>.pipe()</code>, and more.</p>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <h3>Migrate</h3>
+            <p>Transform schemas with AST precision. Imports, types, and method chains are all rewritten.</p>
+            <code class="step-cmd">schemashift migrate ./src -f yup -t zod</code>
           </div>
-          <div class="card">
-            <h3>Backup &amp; Rollback</h3>
-            <p>Every migration creates a timestamped backup. Use <code>schemashift rollback</code> to restore originals if anything goes wrong.</p>
-          </div>
-          <div class="card">
-            <h3>AST-Based Precision</h3>
-            <p>Uses ts-morph for real TypeScript AST manipulation, not fragile regex. Handles nested schemas, chained methods, and string-literal safety.</p>
-          </div>
-          <div class="card">
-            <h3>Form Resolver Migration</h3>
-            <p>Automatically rewrites <code>@hookform/resolvers</code> imports during migration &mdash; e.g., <code>yupResolver</code> &#8594; <code>zodResolver</code>. No manual import changes needed.</p>
-          </div>
-          <div class="card">
-            <h3>Complexity Estimation</h3>
-            <p>Pre-migration effort scoring (trivial/low/moderate/high/extreme) with advanced pattern detection, risk areas, and performance warnings.</p>
-          </div>
-          <div class="card">
-            <h3>TODO Resolution Summary</h3>
-            <p>Categorized guidance for all generated <code>TODO(schemashift)</code> comments with actionable resolution steps grouped by type.</p>
-          </div>
-          <div class="card">
-            <h3>Monorepo-Aware Migration</h3>
-            <p>Automatically detects npm/Yarn/pnpm workspaces and suggests topological migration order so dependent packages migrate correctly.</p>
-          </div>
-          <div class="card">
-            <h3>Behavioral Warnings</h3>
-            <p>Detects coercion, validation order, and error format differences between libraries before you migrate. Know exactly what changes.</p>
-          </div>
-          <div class="card">
-            <h3>Bundle Size Estimation</h3>
-            <p>Estimates minified+gzipped size impact of switching schema libraries. See the delta before committing to a migration.</p>
-          </div>
-          <div class="card">
-            <h3>Performance Analysis</h3>
-            <p>Identifies validation speed changes, parse overhead differences, and runtime behavior impacts for your specific migration path.</p>
-          </div>
-          <div class="card">
-            <h3>Type Deduplication</h3>
-            <p>Finds structurally similar schemas across your codebase with confidence scoring. Clean up before or after migration.</p>
-          </div>
-          <div class="card">
-            <h3>Test Scaffolding</h3>
-            <p>Generates validation test stubs for every migrated schema. Verify correctness automatically after migration.</p>
-          </div>
-          <div class="card">
-            <h3>Audit Logging</h3>
-            <p>Records detailed per-file migration history with timestamps, status, and warnings. Full compliance trail for enterprise teams.</p>
-          </div>
-          <div class="card">
-            <h3>Backward Migrations</h3>
-            <p>Migrate back from Zod to Yup or from Valibot to Zod. Full bidirectional support for when requirements change.</p>
-          </div>
-          <div class="card">
-            <h3>Dependency Graph Visualization</h3>
-            <p>Export schema dependency graphs in DOT (Graphviz) or Mermaid format. Color-code by library, highlight circular dependencies, and filter by schema type.</p>
-          </div>
-          <div class="card">
-            <h3>Migration Presets</h3>
-            <p>Built-in templates for common scenarios: React Hook Form + Yup&#8594;Zod, tRPC Zod v3&#8594;v4, Express Joi&#8594;Zod, Next.js forms, and monorepo staged migrations.</p>
-          </div>
-          <div class="card">
-            <h3>Enhanced .when() Migration</h3>
-            <p>Smart Yup <code>.when()</code> analysis generates the right Zod replacement: <code>z.discriminatedUnion()</code>, <code>z.union()</code>, or <code>.superRefine()</code> based on the condition pattern.</p>
-          </div>
-          <div class="card">
-            <h3>Standard Schema Advisor</h3>
-            <p>Detects when both source and target support Standard Schema 1.0. Recommends adapter approach vs full migration with pros, cons, and generated wrapper code.</p>
-          </div>
-          <div class="card">
-            <h3>Approval Workflows</h3>
-            <p>Review gates for shared codebases. Create migration requests, assign reviewers, approve or reject before executing. File-based persistence for auditability.</p>
-          </div>
-          <div class="card">
-            <h3>Webhook Notifications</h3>
-            <p>Send migration events (started, completed, failed, governance violations, drift detected) to Slack, Teams, Zapier, or any HTTP endpoint with HMAC-SHA256 signing.</p>
-          </div>
-          <div class="card">
-            <h3>Cross-Field Validation Helpers</h3>
-            <p>Reusable <code>.superRefine()</code> patterns for common cross-field logic: <code>requireIf</code>, <code>requireOneOf</code>, <code>mutuallyExclusive</code>, and <code>dependentFields</code>.</p>
-          </div>
-          <div class="card">
-            <h3>Project Health Doctor</h3>
-            <p>Run <code>schemashift doctor</code> to diagnose your project: detect schema libraries, flag outdated versions, check form compatibility, and get actionable migration suggestions.</p>
-          </div>
-          <div class="card">
-            <h3>Schema Verification</h3>
-            <p>Contract testing for migrated schemas. Extracts schema names, generates test samples, and verifies migrated schemas produce the same validation behavior as originals.</p>
-          </div>
-          <div class="card">
-            <h3>Canary Migration</h3>
-            <p>Migrate a percentage of files first with <code>--canary 20</code>. Starts with the simplest files, letting you verify before committing to a full migration.</p>
-          </div>
-          <div class="card">
-            <h3>Unified Diff Export</h3>
-            <p>Export standard unified diffs with <code>--output-diff</code> for integration with <code>git apply</code>, code review tools, and CI pipelines. Works with dry-run mode.</p>
-          </div>
-          <div class="card">
-            <h3>Compliance Reports</h3>
-            <p>Generate SOC2 and HIPAA compliance reports from migration audit logs. Includes change control summaries, integrity verification, and access control records.</p>
-          </div>
-          <div class="card">
-            <h3>Multi-Platform CI/CD</h3>
-            <p>Ready-to-use templates for GitHub Actions, GitLab CI, and Azure DevOps. Includes JUnit test reporting, artifact publishing, and governance checks.</p>
-          </div>
-          <div class="card">
-            <h3>Pre-Commit Hooks</h3>
-            <p>Integrate governance checks into your git workflow with <code>schemashift hooks install</code>. Detects husky and lint-staged automatically.</p>
-          </div>
-          <div class="card">
-            <h3>Policy-as-Code</h3>
-            <p>Manage schema governance policies with <code>schemashift policy</code>. Initialize from templates, check compliance, and list active policies for your organization.</p>
-          </div>
-          <div class="card">
-            <h3>Duration Estimation</h3>
-            <p>Get pre-migration time estimates based on complexity analysis. Ranges from minutes (trivial) to hours (extreme) based on schema count and advanced patterns.</p>
-          </div>
-          <div class="card">
-            <h3>Dead Schema Detection</h3>
-            <p>Find schema definitions that are never referenced elsewhere in your codebase. Clean up unused code before or after migration to keep your project lean.</p>
-          </div>
-          <div class="card">
-            <h3>Import Deduplication</h3>
-            <p>Detects duplicate import declarations from the same module within files — a common side effect of migration. Suggests merged imports for cleaner code.</p>
+          <div class="step-arrow">&rarr;</div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <h3>Verify</h3>
+            <p>Contract-test migrated schemas. Every backup is timestamped for instant rollback.</p>
+            <code class="step-cmd">schemashift verify ./src -f yup -t zod</code>
           </div>
         </div>
       </section>
 
-      <section class="pricing-section">
+      <!-- ════════ KEY FEATURES ════════ -->
+      <section class="features-section">
+        <h2>Why SchemaShift</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">&#9670;</div>
+            <h3>AST-Based Precision</h3>
+            <p>Uses ts-morph for real TypeScript AST manipulation. Handles nested schemas, chained methods, and string-literal safety &mdash; not fragile regex.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#8635;</div>
+            <h3>Backup &amp; Rollback</h3>
+            <p>Every migration creates a timestamped backup. Restore originals instantly with <code>schemashift rollback</code>.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#9889;</div>
+            <h3>Zod v3 &rarr; v4</h3>
+            <p>Handles 20+ breaking changes: <code>.merge()</code>, <code>.superRefine()</code>, <code>z.nativeEnum()</code>, error params, <code>.pipe()</code>, and more.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128196;</div>
+            <h3>Form Library Awareness</h3>
+            <p>Auto-rewrites <code>@hookform/resolvers</code> imports. Detects react-hook-form, Formik, and Mantine and warns about adapter changes.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#9888;</div>
+            <h3>Behavioral Warnings</h3>
+            <p>Detects coercion, validation order, and error format differences between libraries before you migrate.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#128230;</div>
+            <h3>Monorepo Support</h3>
+            <p>Auto-detects npm/Yarn/pnpm workspaces with topological ordering for correct migration order across packages.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#9881;</div>
+            <h3>CI/CD Integration</h3>
+            <p>SARIF for GitHub Code Scanning, JUnit test reporting. Templates for GitHub Actions, GitLab CI, and Azure DevOps.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">&#10003;</div>
+            <h3>Contract Testing</h3>
+            <p>Verify migrated schemas produce the same validation results as originals with sample generation and parity scoring.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ TERMINAL DEMO ════════ -->
+      <section class="terminal-section">
+        <h2>See It In Action</h2>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">Terminal</span>
+          </div>
+          <pre class="terminal-body"><code><span class="muted">$</span> <span class="cmd">schemashift migrate</span> <span class="string">./src</span> <span class="flag">-f yup -t zod --dry-run</span>
+
+<span class="cmd">SchemaShift</span> v0.10.0
+
+  Analyzing 24 schema files...
+
+  <span class="string">src/schemas/user.ts</span>      <span class="green-text">+12</span> <span class="red-text">-14</span>  0 warnings
+  <span class="string">src/schemas/product.ts</span>   <span class="green-text">+8</span>  <span class="red-text">-9</span>   0 warnings
+  <span class="string">src/schemas/order.ts</span>     <span class="green-text">+15</span> <span class="red-text">-18</span>  1 warning
+  <span class="string">src/schemas/auth.ts</span>      <span class="green-text">+6</span>  <span class="red-text">-7</span>   0 warnings
+  <span class="muted">... 20 more files</span>
+
+  <span class="green-text">Summary:</span> 24 files, 41 added, 48 removed, 1 warning
+  <span class="muted">Dry run complete. No files were modified.</span>
+  <span class="muted">Run without --dry-run to apply changes.</span></code></pre>
+        </div>
+      </section>
+
+      <!-- ════════ SUPPORTED MIGRATIONS TABLE ════════ -->
+      <section class="migrations-section">
+        <h2>Supported Migrations</h2>
+        <table class="migrations-table">
+          <thead>
+            <tr>
+              <th>Migration Path</th>
+              <th>Free</th>
+              <th>Individual</th>
+              <th>Pro</th>
+              <th>Team</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Yup &rarr; Zod</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Joi &rarr; Zod</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Zod v3 &rarr; v4</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>io-ts &rarr; Zod</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Zod &harr; Valibot</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Zod &rarr; Yup</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Valibot &rarr; Zod</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Zod &harr; ArkType</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>Zod &harr; Superstruct</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+            <tr>
+              <td>io-ts &rarr; Effect Schema</td>
+              <td class="cross">&mdash;</td>
+              <td class="cross">&mdash;</td>
+              <td class="check">&#10003;</td>
+              <td class="check">&#10003;</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ════════ PRICING ════════ -->
+      <section class="pricing-section" id="pricing">
         <h2>Simple Pricing</h2>
         <p class="pricing-subtitle">Start free. Upgrade when you need more.</p>
 
@@ -219,7 +315,6 @@
             <div class="price">$0</div>
             <div class="price-note">Forever</div>
             <ul class="features">
-              <li>10 files per migration</li>
               <li>Yup + Joi to Zod</li>
               <li>1 device</li>
               <li>JSON reports</li>
@@ -230,7 +325,6 @@
               <li>Enhanced .when() migration</li>
               <li>Project doctor diagnostics</li>
               <li>Unified diff export</li>
-              <li>Dry-run summary table</li>
               <li>Import deduplication</li>
               <li class="disabled">HTML reports</li>
               <li class="disabled">Git integration</li>
@@ -251,7 +345,6 @@
             <div class="price">$49</div>
             <div class="price-note">One-time payment</div>
             <ul class="features">
-              <li>Unlimited files</li>
               <li>+ Zod v3&#8594;v4 upgrade</li>
               <li>1 device</li>
               <li>HTML reports</li>
@@ -287,7 +380,6 @@
             <div class="price">$149</div>
             <div class="price-note">One-time payment</div>
             <ul class="features">
-              <li>Unlimited files</li>
               <li>All forward + backward migrations</li>
               <li>4 devices</li>
               <li>HTML/JSON/CSV reports</li>
@@ -323,15 +415,7 @@
             <h3>Team</h3>
             <div style="display: flex; align-items: baseline">
               <div class="price">$29</div>
-              <div
-                style="
-                  color: var(--muted);
-                  font-size: 1.25rem;
-                  padding-left: 0.25rem;
-                "
-              >
-                /month
-              </div>
+              <div style="color: var(--muted); font-size: 1.25rem; padding-left: 0.25rem">/month</div>
             </div>
             <div class="price-note">Recurring payment</div>
             <ul class="features">
@@ -358,217 +442,61 @@
         </div>
       </section>
 
-      <section class="migrations-section">
-        <h2>Supported Migrations</h2>
-        <table class="migrations-table">
-          <thead>
-            <tr>
-              <th>Migration Path</th>
-              <th>Free</th>
-              <th>Individual</th>
-              <th>Pro</th>
-              <th>Team</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Yup → Zod</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Joi → Zod</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Zod v3 → v4</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>io-ts → Zod</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Zod ↔ Valibot</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Zod → Yup</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Valibot → Zod</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Zod ↔ ArkType</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>Zod ↔ Superstruct</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-            <tr>
-              <td>io-ts → Effect Schema</td>
-              <td class="cross">—</td>
-              <td class="cross">—</td>
-              <td class="check">✓</td>
-              <td class="check">✓</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
+      <!-- ════════ ADVANCED FEATURES (condensed) ════════ -->
       <section class="migrations-section">
         <h2>Advanced Features</h2>
-        <p
-          style="
-            text-align: center;
-            color: var(--muted);
-            margin-bottom: 2rem;
-          "
-        >
-          Beyond basic migration. SchemaShift provides deep analysis and
-          enterprise-grade controls.
+        <p style="text-align: center; color: var(--muted); margin-bottom: 2.5rem">
+          Beyond basic migration. Deep analysis and enterprise-grade controls.
         </p>
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-          "
-        >
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Advanced Analysis</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Deep complexity scoring, migration readiness assessment, and
-              detailed schema introspection to understand migration impact before
-              you start.
-            </p>
+        <div class="advanced-grid">
+          <div class="advanced-group">
+            <h3 class="advanced-group-title">Analysis</h3>
+            <ul class="advanced-list">
+              <li><strong>Complexity Estimation</strong> &mdash; Pre-migration effort scoring with risk areas and duration estimates</li>
+              <li><strong>Bundle Size Estimation</strong> &mdash; Compare minified+gzipped size impact before committing</li>
+              <li><strong>Performance Analysis</strong> &mdash; Identify validation speed and parse overhead differences</li>
+              <li><strong>Type Deduplication</strong> &mdash; Find structurally similar schemas across files</li>
+              <li><strong>Dead Schema Detection</strong> &mdash; Find schema definitions never referenced elsewhere</li>
+              <li><strong>Import Deduplication</strong> &mdash; Detect and merge duplicate imports after migration</li>
+            </ul>
           </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Risk Scoring</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Per-file risk assessment with configurable thresholds. Export to
-              CSV for project tracking. Fail CI builds that exceed your risk
-              tolerance.
-            </p>
+          <div class="advanced-group">
+            <h3 class="advanced-group-title">Migration</h3>
+            <ul class="advanced-list">
+              <li><strong>Cross-File Resolution</strong> &mdash; Dependency graph analysis for correct multi-file ordering</li>
+              <li><strong>Chain Migrations</strong> &mdash; Multi-step paths like yup&rarr;zod&rarr;valibot in one command</li>
+              <li><strong>Migration Presets</strong> &mdash; Templates for React Hook Form, tRPC, Express, Next.js, monorepos</li>
+              <li><strong>Canary Mode</strong> &mdash; Migrate a percentage of files first, verify, then complete</li>
+              <li><strong>Enhanced .when()</strong> &mdash; Smart Yup .when() analysis generates the right Zod replacement</li>
+              <li><strong>Backward Migrations</strong> &mdash; Full bidirectional support: Zod&rarr;Yup, Valibot&rarr;Zod, and more</li>
+            </ul>
           </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Cross-File Resolution</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Dependency graph analysis resolves schema imports across files,
-              ensuring multi-file projects migrate in the correct order.
-            </p>
+          <div class="advanced-group">
+            <h3 class="advanced-group-title">Enterprise &amp; CI/CD</h3>
+            <ul class="advanced-list">
+              <li><strong>Governance &amp; Auto-Fix</strong> &mdash; Enforce naming conventions, complexity limits, and schema rules</li>
+              <li><strong>Governance Templates</strong> &mdash; Built-in: no-any-schemas, require-descriptions, naming-convention</li>
+              <li><strong>Policy-as-Code</strong> &mdash; Init policies from templates, check compliance, list active rules</li>
+              <li><strong>Schema Drift Detection</strong> &mdash; Snapshot-based comparison tracks schema divergence over time</li>
+              <li><strong>Webhook Notifications</strong> &mdash; Slack, Teams, or any HTTP endpoint with HMAC-SHA256 signing</li>
+              <li><strong>Approval Workflows</strong> &mdash; Create migration requests, assign reviewers, approve or reject</li>
+            </ul>
           </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Chain Migrations</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Multi-step migrations like
-              <code style="color: var(--green)">yup&rarr;zod&rarr;valibot</code>
-              in a single command with automatic intermediate validation.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Compatibility Checking</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Pre-migration validation detects version-specific incompatible
-              patterns and provides actionable suggestions before transforming
-              code.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Governance &amp; Plugins</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Enforce naming conventions, complexity limits, and validation
-              rules. Extend SchemaShift with custom migration plugins for your
-              organization.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Form Resolver &amp; Complexity</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Automatic <code>@hookform/resolvers</code> import rewriting and
-              pre-migration effort scoring with risk area identification and
-              performance warnings.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Monorepo Support</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Workspace detection with topological ordering. Migrates packages
-              in dependency order to prevent breakage across your monorepo.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Schema Drift Detection</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Snapshot-based comparison detects when schemas diverge from
-              baseline. Track added, removed, and modified schemas over time
-              for compliance and audit.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">CI/CD Integration</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              SARIF output for GitHub Code Scanning, JUnit for test reporting.
-              Templates for GitHub Actions, GitLab CI, and Azure DevOps.
-              Enhanced audit logging with JSON/CSV export.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Governance Templates</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Built-in rule templates: no-any-schemas, require-descriptions,
-              max-nesting-depth, naming-convention, and more. Enforce schema
-              quality standards out of the box.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Contract Testing</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              Verify migrated schemas produce the same validation results as
-              originals. Generates test samples, runs against both libraries,
-              and reports parity scores.
-            </p>
-          </div>
-          <div class="card">
-            <h3 style="margin-bottom: 0.75rem">Compliance &amp; Audit</h3>
-            <p style="color: var(--muted); font-size: 0.9rem">
-              SOC2 and HIPAA compliance reports. Policy-as-code governance.
-              Approval workflows with reviewer tracking. Full audit trail
-              for regulated environments.
-            </p>
+          <div class="advanced-group">
+            <h3 class="advanced-group-title">Reporting &amp; Compliance</h3>
+            <ul class="advanced-list">
+              <li><strong>SARIF + JUnit Output</strong> &mdash; GitHub Code Scanning and CI test reporting</li>
+              <li><strong>Audit Logging</strong> &mdash; Per-file migration history with JSON/CSV export</li>
+              <li><strong>Compliance Reports</strong> &mdash; SOC2 and HIPAA reports from audit logs</li>
+              <li><strong>Dependency Graphs</strong> &mdash; Export in DOT (Graphviz) or Mermaid format</li>
+              <li><strong>Test Scaffolding</strong> &mdash; Generate validation test stubs for every migrated schema</li>
+              <li><strong>Risk Scoring</strong> &mdash; Per-file risk assessment with configurable thresholds</li>
+            </ul>
           </div>
         </div>
       </section>
 
+      <!-- ════════ MIGRATION GUIDES ════════ -->
       <section class="migrations-section">
         <h2>Migration Guides</h2>
         <p style="text-align: center; color: var(--muted); margin-bottom: 2rem">
@@ -576,51 +504,51 @@
         </p>
         <div class="guides-grid">
           <a href="migrate-yup-to-zod.html">
-            <strong>Yup → Zod</strong>
+            <strong>Yup &rarr; Zod</strong>
             <span>Most popular migration path. Full conversion guide with coercion handling.</span>
           </a>
           <a href="migrate-joi-to-zod.html">
-            <strong>Joi → Zod</strong>
+            <strong>Joi &rarr; Zod</strong>
             <span>Convert Joi schemas to Zod with TypeScript inference.</span>
           </a>
           <a href="migrate-zod-v3-to-v4.html">
-            <strong>Zod v3 → v4</strong>
+            <strong>Zod v3 &rarr; v4</strong>
             <span>Handle 20+ breaking changes in the Zod v4 upgrade.</span>
           </a>
           <a href="migrate-io-ts-to-zod.html">
-            <strong>io-ts → Zod</strong>
+            <strong>io-ts &rarr; Zod</strong>
             <span>Move from FP-style codecs to Zod's fluent API.</span>
           </a>
           <a href="migrate-zod-to-valibot.html">
-            <strong>Zod → Valibot</strong>
+            <strong>Zod &rarr; Valibot</strong>
             <span>Switch to Valibot's tree-shakeable pipe-based API.</span>
           </a>
           <a href="migrate-zod-to-arktype.html">
-            <strong>Zod → ArkType</strong>
+            <strong>Zod &rarr; ArkType</strong>
             <span>Convert to ArkType's TypeScript-like string syntax.</span>
           </a>
           <a href="migrate-zod-to-superstruct.html">
-            <strong>Zod → Superstruct</strong>
+            <strong>Zod &rarr; Superstruct</strong>
             <span>Migrate to Superstruct's lightweight bare function API.</span>
           </a>
           <a href="migrate-io-ts-to-effect.html">
-            <strong>io-ts → Effect Schema</strong>
+            <strong>io-ts &rarr; Effect Schema</strong>
             <span>Migrate to the official io-ts successor in the Effect ecosystem.</span>
           </a>
           <a href="migrate-zod-to-yup.html">
-            <strong>Zod → Yup</strong>
+            <strong>Zod &rarr; Yup</strong>
             <span>Backward migration for legacy codebase integration.</span>
           </a>
           <a href="migrate-valibot-to-zod.html">
-            <strong>Valibot → Zod</strong>
+            <strong>Valibot &rarr; Zod</strong>
             <span>Convert Valibot's pipe API back to Zod's fluent chains.</span>
           </a>
           <a href="migrate-arktype-to-zod.html">
-            <strong>ArkType → Zod</strong>
+            <strong>ArkType &rarr; Zod</strong>
             <span>Convert ArkType string syntax to Zod method chains.</span>
           </a>
           <a href="migrate-superstruct-to-zod.html">
-            <strong>Superstruct → Zod</strong>
+            <strong>Superstruct &rarr; Zod</strong>
             <span>Migrate bare functions to Zod's namespaced API.</span>
           </a>
         </div>
