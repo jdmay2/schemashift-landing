@@ -252,6 +252,27 @@
                 <span class="badge">Individual+</span>
               </td>
             </tr>
+            <tr>
+              <td><code>--dead-schemas</code></td>
+              <td>
+                Detect unused schema definitions
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--import-dedup</code></td>
+              <td>
+                Detect duplicate imports from the same module
+                <span class="badge">Individual+</span>
+              </td>
+            </tr>
+            <tr>
+              <td><code>--advisor &lt;migration&gt;</code></td>
+              <td>
+                Migration vs Standard Schema adapter guidance, e.g. "zod-&gt;valibot"
+                <span class="badge" style="background: var(--green)">Free</span>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -1904,6 +1925,8 @@ const productSchema = z.object({
           @effect/schema, and TypeBox v0.34+. Detection is included in the
           <code>analyze</code> command output (FREE tier).
         </p>
+        <pre><code><span class="comment"># Get adapter-vs-migration guidance</span>
+<span class="cmd">schemashift analyze</span> ./src <span class="flag">--advisor</span> zod-&gt;valibot</code></pre>
 
         <h2 id="form-resolver-migration">Form Resolver Migration</h2>
         <p>
@@ -2046,7 +2069,7 @@ const productSchema = z.object({
           Find schema definitions that are never referenced elsewhere in your codebase
           (<span class="badge">Individual+</span>):
         </p>
-        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--dedup</span></code></pre>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--dead-schemas</span></code></pre>
         <p>
           Scans for variable declarations that use schema library patterns (<code>z.</code>, <code>yup.</code>,
           <code>Joi.</code>, etc.) and checks if those variables are referenced in other files or elsewhere in the
@@ -2064,8 +2087,9 @@ const productSchema = z.object({
         <h2 id="import-deduplication">Import Deduplication</h2>
         <p>
           Detect duplicate import declarations from the same module within files
-          (<span class="badge">Free</span>):
+          (<span class="badge">Individual+</span>):
         </p>
+        <pre><code><span class="cmd">schemashift analyze</span> ./src <span class="flag">--import-dedup</span></code></pre>
         <p>
           After migration, files may end up with multiple import statements from the same module &mdash;
           for example, two <code>import { ... } from 'zod'</code> lines. The import deduplicator detects these
@@ -2855,7 +2879,7 @@ include:
             </tr>
             <tr>
               <td>Import deduplication</td>
-              <td>✓</td>
+              <td>—</td>
               <td>✓</td>
               <td>✓</td>
               <td>✓</td>
